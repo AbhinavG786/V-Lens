@@ -68,7 +68,7 @@ const productSchema = new Schema(
     },
     frameShape: {
       type: String,
-    }, 
+    },
     material: {
       type: String,
     },
