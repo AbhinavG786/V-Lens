@@ -1,1 +1,1 @@
-//firebase auth handler
+//firebase auth
