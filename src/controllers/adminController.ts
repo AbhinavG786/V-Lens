@@ -1,15 +1,24 @@
 import { User } from "../models/userModel";
 import express from "express";
 
-class UserController {
-  getUserProfile = async (req: express.Request, res: express.Response) => {
-    const firebaseUID = req.user?.uid; 
-    if (!firebaseUID) {
-      res.status(400).json({ message: "Firebase ID is required" });
+class AdminController {
+  getAllUsers = async (req: express.Request, res: express.Response) => {
+    try {
+      const users = await User.find();
+      res.status(200).json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching users", error });
+    }
+  };
+
+  getUserById = async (req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
+    if (!userId) {
+      res.status(400).json({ message: "User ID is required" });
       return;
     }
     try {
-   const user = await User.findOne({ firebaseUID });
+      const user = await User.findById(userId);
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
@@ -21,10 +30,10 @@ class UserController {
   };
 
   updateUser = async (req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
     const { fullName, email, gender } = req.body;
-    const firebaseUID=req.user?.uid;
-    if (!firebaseUID) {
-      res.status(400).json({ message: "Firebase ID is required" });
+    if (!userId) {
+      res.status(400).json({ message: "User ID is required" });
       return;
     }
     try {
@@ -41,7 +50,7 @@ class UserController {
             return;
           }
         }
-      const updatedUser = await User.findOneAndUpdate({firebaseUID},updatedData , {
+      const updatedUser = await User.findByIdAndUpdate(userId,updatedData , {
         new: true,
       });
       if (!updatedUser) {
@@ -55,13 +64,13 @@ class UserController {
   };
 
   deleteUser=async(req: express.Request, res: express.Response) => {
-   const firebaseUID = req.user?.uid;
-    if (!firebaseUID) {
-      res.status(400).json({ message: "Firebase ID is required" });
+    const { userId } = req.params;
+    if (!userId) {
+      res.status(400).json({ message: "User ID is required" });
       return;
     }
     try {
-      const deletedUser = await User.findOneAndDelete({firebaseUID});
+      const deletedUser = await User.findByIdAndDelete(userId);
       if (!deletedUser) {
         res.status(404).json({ message: "User not found" });
         return;
@@ -73,4 +82,4 @@ class UserController {
   }
 }
 
-export default new UserController();
+export default new AdminController();

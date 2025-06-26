@@ -8,11 +8,12 @@
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["src", "types"],
+  "include": ["src", "types", "src/firebase"],
   "exclude": ["node_modules", "dist"]
 }
