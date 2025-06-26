@@ -10,23 +10,23 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
-    password: {
-      type: String,
-      required: true,
-    },
     gender: {
       type: String,
       enum: ["male", "female", "other"],
     },
-    role: {
-      type: String,
-      enum: ["user", "admin", "staff"],
-      default: "user",
+    isAdmin: {
+      type: Boolean,
+      default: false,
     },
     loginMethod: {
       type: String,
       enum: ["email", "google"],
       default: "email",
+    },
+    firebaseUID: {
+      type: String,
+      required: true,
+      unique: true,
     },
     addresses: [
       {

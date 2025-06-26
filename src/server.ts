@@ -4,6 +4,7 @@ import http from "http";
 import cors from "cors";
 import connectDB from "./database/connection";
 import router from "./routes/index"; 
+import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use("/", router);
 
