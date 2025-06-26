@@ -2,12 +2,12 @@
   "name": "intern-valsco",
   "version": "1.0.0",
   "description": "Valsco Backend LensKart",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "dev": "node dist/index.js",
-    "start": "node dist/index.js"
+    "dev": "node dist/server.js",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
