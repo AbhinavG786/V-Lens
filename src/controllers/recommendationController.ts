@@ -1,5 +1,5 @@
 import express from "express";
-import {Recommendation} from "../models/Recommendation";
+import {Recommendation} from "../models/recommendationModel";
 
 // GET /recommendations/:userId
 export class RecommendationController {
