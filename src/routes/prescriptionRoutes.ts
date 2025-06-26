@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { extractPrescriptionText } from '../controllers/prescription.controller';
+import { extractPrescriptionText } from '../controllers/prescriptionController';
 
 const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
