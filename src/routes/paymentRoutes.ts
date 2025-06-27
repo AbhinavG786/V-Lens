@@ -1,15 +1,15 @@
 import { Router } from 'express';
-import { createPayment, getAllPayments, getPaymentById } from '../controllers/paymentController';
+import paymentController from '../controllers/paymentController';
 
 const router = Router();
 
-// POST /api/payments
-router.post('/', createPayment);
+// POST /payments
+router.post('/', paymentController.createPayment);
 
-// GET /api/payments
-router.get('/', getAllPayments);
+// GET /payments
+router.get('/', paymentController.getAllPayments);
 
-// GET /api/payments/:id
-router.get('/:id', getPaymentById);
+// GET /payments/:id
+router.get('/:id', paymentController.getPaymentById);
 
 export default router; 

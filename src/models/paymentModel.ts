@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, InferSchemaType } from 'mongoose';
 
 export enum PaymentStatus {
   SUCCESS = 'success',
@@ -6,17 +6,7 @@ export enum PaymentStatus {
   PENDING = 'pending',
 }
 
-export interface IPayment extends Document {
-  userId: mongoose.Types.ObjectId;
-  orderId: mongoose.Types.ObjectId;
-  amount: number;
-  method: string;
-  transactionId: string;
-  status: PaymentStatus;
-  paidAt: Date;
-}
-
-const PaymentSchema: Schema = new Schema<IPayment>({
+const PaymentSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
   amount: { type: Number, required: true },
@@ -26,4 +16,7 @@ const PaymentSchema: Schema = new Schema<IPayment>({
   paidAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.model<IPayment>('Payment', PaymentSchema); 
+type PaymentType = InferSchemaType<typeof PaymentSchema>;
+
+export default mongoose.model<PaymentType>('Payment', PaymentSchema);
+export type { PaymentType }; 
