@@ -1,14 +1,14 @@
-import mongoose, { Schema, InferSchemaType } from 'mongoose';
+import mongoose, { Schema, InferSchemaType } from "mongoose";
 
 export enum PaymentStatus {
-  SUCCESS = 'success',
-  FAILED = 'failed',
-  PENDING = 'pending',
+  SUCCESS = "success",
+  FAILED = "failed",
+  PENDING = "pending",
 }
 
 const PaymentSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true },
   amount: { type: Number, required: true },
   method: { type: String, required: true },
   transactionId: { type: String, required: true },
@@ -18,4 +18,4 @@ const PaymentSchema = new Schema({
 
 type PaymentType = InferSchemaType<typeof PaymentSchema>;
 
-export const Payment=mongoose.model<PaymentType>('Payment', PaymentSchema);
+export const Payment = mongoose.model<PaymentType>("Payment", PaymentSchema);

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import Payment, { PaymentStatus } from '../models/paymentModel';
+import { PaymentStatus ,Payment} from '../models/paymentModel';
 import mongoose from 'mongoose';
 
 class PaymentController {
