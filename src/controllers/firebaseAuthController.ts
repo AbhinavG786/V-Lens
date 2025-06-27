@@ -4,7 +4,7 @@ import { User } from "../models/userModel";
 
 class FirebaseAuthController {
   login = async (req: express.Request, res: express.Response) => {
-    const { idToken } = req.body;
+    const { fullName,idToken } = req.body;
     if (!idToken) {
       res.status(400).json({ error: "ID token required" });
       return;
@@ -15,10 +15,10 @@ class FirebaseAuthController {
 
       const decoded = await admin.auth().verifyIdToken(idToken, true);
 
-      if (!decoded.email_verified) {
-        res.status(401).json({ error: "Please verify your email first." });
-        return;
-      }
+      // if (!decoded.email_verified) {
+      //   res.status(401).json({ error: "Please verify your email first." });
+      //   return;
+      // }
 
       const sessionCookie = await admin
         .auth()
@@ -28,10 +28,15 @@ class FirebaseAuthController {
 
       let user = await User.findOne({ firebaseUID: decoded.uid });
       if (!user) {
+       const Name=decoded.name || fullName
+       if (!Name) {
+     res.status(400).json({ error: "Full name is required for new user." });
+     return
+  }
         user = await User.create({
           firebaseUID: decoded.uid,
           email: decoded.email,
-          fullName: decoded.name,
+          fullName: Name,
           loginMethod: provider === "google.com" ? "google" : "email",
           addresses: [],
           wishlist: [],

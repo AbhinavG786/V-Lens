@@ -18,5 +18,4 @@ const PaymentSchema = new Schema({
 
 type PaymentType = InferSchemaType<typeof PaymentSchema>;
 
-export default mongoose.model<PaymentType>('Payment', PaymentSchema);
-export type { PaymentType }; 
+export const Payment=mongoose.model<PaymentType>('Payment', PaymentSchema);
