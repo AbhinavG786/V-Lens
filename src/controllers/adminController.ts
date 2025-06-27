@@ -3,9 +3,19 @@ import express from "express";
 
 class AdminController {
   getAllUsers = async (req: express.Request, res: express.Response) => {
+    const { skip, take } = req.pagination!;
     try {
-      const users = await User.find();
-      res.status(200).json(users);
+      const users = await User.find().skip(Number(skip)).limit(Number(take));
+      const total = await User.countDocuments();
+      res
+        .status(200)
+        .json({
+          data: users,
+          total,
+          skip: Number(skip),
+          take: Number(take),
+          totalPages: Math.ceil(total / Number(take)),
+        });
     } catch (error) {
       res.status(500).json({ message: "Error fetching users", error });
     }
@@ -37,20 +47,20 @@ class AdminController {
       return;
     }
     try {
-        const updatedData: any = {};
-        if (fullName) updatedData.fullName = fullName;
-        if (email) updatedData.email = email;
-        
-        if (gender) {
-          const allowedGenders = (User.schema.path('gender') as any).enumValues;
-          if (allowedGenders.includes(gender)) {
-            updatedData.gender = gender;
-          } else {
-            res.status(400).json({ message: `Invalid gender value.` });
-            return;
-          }
+      const updatedData: any = {};
+      if (fullName) updatedData.fullName = fullName;
+      if (email) updatedData.email = email;
+
+      if (gender) {
+        const allowedGenders = (User.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          updatedData.gender = gender;
+        } else {
+          res.status(400).json({ message: `Invalid gender value.` });
+          return;
         }
-      const updatedUser = await User.findByIdAndUpdate(userId,updatedData , {
+      }
+      const updatedUser = await User.findByIdAndUpdate(userId, updatedData, {
         new: true,
       });
       if (!updatedUser) {
@@ -63,7 +73,7 @@ class AdminController {
     }
   };
 
-  deleteUser=async(req: express.Request, res: express.Response) => {
+  deleteUser = async (req: express.Request, res: express.Response) => {
     const { userId } = req.params;
     if (!userId) {
       res.status(400).json({ message: "User ID is required" });
@@ -79,7 +89,7 @@ class AdminController {
     } catch (error) {
       res.status(500).json({ message: "Error deleting user", error });
     }
-  }
+  };
 }
 
 export default new AdminController();

@@ -6,6 +6,7 @@ import prescriptionRoutes from "./prescriptionRoutes"
 import authRoutes from "./authRoutes"
 import paymentRoutes from "./paymentRoutes"
 import notificationRoutes from "./notificationRoutes";
+import adminRoutes from "./adminRoutes";
 
 
 const router = Router();
@@ -17,5 +18,6 @@ router.use("/prescription", prescriptionRoutes);
 router.use("/auth", authRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/notification",notificationRoutes);
+router.use("/admin", adminRoutes);
 
 export default router;
