@@ -113,53 +113,56 @@ class NotificationController {
 
 
     sendNotificationToAll = async (req: Request, res: Response) => {
-        const { title, message, url } = req.body;
+    const { title, message, url, eventType } = req.body;
 
-        if (!title || !message) {
+    if (!title || !message) {
         res.status(400).json({ error: "Title and message are required" });
         return;
-        }
+    }
 
-        try {
+    try 
+    {
         const users = await User.find({}, { _id: 1 });
         const userIds = users.map((u) => u._id);
 
-        const notification = await Notification.create({ title, message });
+        const notification = await Notification.create({ title, message, eventType });
         const payload = JSON.stringify({ title, message, url });
 
         await Promise.all(
             userIds.map(async (userId) => {
-            const subscriptions = await Subscription.find({ userId });
+                const subscriptions = await Subscription.find({ userId });
 
-            for (const sub of subscriptions) {
-                if (!sub.auth || !sub.p256dh) continue;
+                for (const sub of subscriptions) {
+                    if (!sub.auth || !sub.p256dh) continue;
 
-                const pushSubscription = {
-                endpoint: sub.endpoint,
-                keys: {
-                    auth: sub.auth,
-                    p256dh: sub.p256dh,
-                },
-                };
+                    const pushSubscription = {
+                        endpoint: sub.endpoint,
+                        keys: {
+                            auth: sub.auth,
+                            p256dh: sub.p256dh,
+                        },
+                    };
 
-                try {
-                await webPush.sendNotification(pushSubscription, payload);
-                } catch (error: any) {
-                if (error.statusCode === 410) {
-                    await Subscription.findOneAndDelete({ endpoint: sub.endpoint });
+                    try {
+                        await webPush.sendNotification(pushSubscription, payload);
+                    } 
+                    catch (error: any) {
+                        if (error.statusCode === 410) {
+                            await Subscription.findOneAndDelete({ endpoint: sub.endpoint });
+                        }
+                    }
                 }
-                }
-            }
             })
-        );
+            );
 
-        return res.status(200).json({
-            message: `Notification sent to ${userIds.length} user(s)`,
-        });
+            res.status(200).json({
+                message: `Notification sent to ${userIds.length} user(s)`,
+            });
         } catch (error) {
-        return res.status(500).json({ message: "Error sending bulk notifications", error });
+            res.status(500).json({ message: "Error sending bulk notifications", error });
         }
     };
+
 
     getAllNotifications = async (req: Request, res: Response) => {
         try {
