@@ -7,6 +7,7 @@ import authRoutes from "./authRoutes"
 import paymentRoutes from "./paymentRoutes"
 import notificationRoutes from "./notificationRoutes";
 import adminRoutes from "./adminRoutes";
+import inventoryRoutes from "./inventoryRoutes";
 
 
 const router = Router();
@@ -19,5 +20,6 @@ router.use("/auth", authRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/notification",notificationRoutes);
 router.use("/admin", adminRoutes);
+router.use("/admin", inventoryRoutes);
 
 export default router;
