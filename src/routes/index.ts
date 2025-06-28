@@ -9,6 +9,7 @@ import notificationRoutes from "./notificationRoutes";
 import adminRoutes from "./adminRoutes";
 import inventoryRoutes from "./inventoryRoutes";
 import addressRoutes from "./addressRoutes";
+import roomRoutes from "./roomRoutes";
 
 
 const router = Router();
@@ -23,5 +24,6 @@ router.use("/notification",notificationRoutes);
 router.use("/admin", adminRoutes);
 router.use("/admin", inventoryRoutes);
 router.use("/address", addressRoutes);
+router.use("/room", roomRoutes);
 
 export default router;
