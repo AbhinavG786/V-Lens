@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 
-export const uploadPrescription = async (req: Request, res: Response): Promise<void> => {
+class UploadController {
+uploadPrescription = async (req: Request, res: Response)=> {
   try {
     if (!req.file || !req.file.path) {
       res.status(400).json({ error: 'No file uploaded' });
@@ -11,3 +12,5 @@ export const uploadPrescription = async (req: Request, res: Response): Promise<v
     res.status(500).json({ error: error.message });
   }
 };
+}
+export default new UploadController();

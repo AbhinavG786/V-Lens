@@ -1,32 +1,24 @@
-import { Address } from '../models/addressSchema';
+import { Address } from '../models/addressModel';
 import express from 'express';
 
 class AddressController {
   createAddress = async (req: express.Request, res: express.Response) => {
     try {
       const { 
-        fullName, 
-        mobileNumber, 
-        alternativeMobile,
+        userId,
         pinCode, 
         locality, 
         addressLine, 
         city, 
         state,
         addressType,
-        landmark,
         isDefault
       } = req.body;
 
-      if (!fullName || !mobileNumber || !pinCode || !locality || !addressLine || !city || !state) {
+      if (!pinCode || !locality || !addressLine || !city || !state) {
         res.status(400).json({ message: 'All required fields must be provided' });
         return;
       }
-      if (!/^[6-9]\d{9}$/.test(mobileNumber)) {
-        res.status(400).json({ message: 'Invalid mobile number format' });
-        return;
-      }
-
       if (!/^\d{6}$/.test(pinCode)) {
         res.status(400).json({ message: 'Invalid pin code format' });
         return;
@@ -37,16 +29,13 @@ class AddressController {
       }
 
       const newAddress = await Address.create({
-        fullName,
-        mobileNumber,
-        alternativeMobile,
+        userId,
         pinCode,
         locality,
         addressLine,
         city,
         state,
         addressType: addressType || 'Home',
-        landmark,
         isDefault: isDefault || false
       });
 
@@ -106,12 +95,25 @@ class AddressController {
 
   updateAddress = async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
+    const { pinCode, locality, addressLine, city, state } = req.body;
     if (!id) {
       res.status(400).json({ message: 'Address ID is required' });
       return;
     }
     try {
-      const updated = await Address.findByIdAndUpdate(id, req.body, { new: true });
+      const updatedData:any={}
+      if (pinCode) {
+        if (!/^\d{6}$/.test(pinCode)) {
+          res.status(400).json({ message: 'Invalid pin code format' });
+          return;
+        }
+        updatedData.pinCode = pinCode;
+      }
+      if (locality) updatedData.locality = locality;
+      if (addressLine) updatedData.addressLine = addressLine;
+      if (city) updatedData.city = city;
+      if (state) updatedData.state = state;
+      const updated = await Address.findByIdAndUpdate(id, updatedData, { new: true });
 
       if (!updated) {
         res.status(404).json({ message: "Address not found" });
