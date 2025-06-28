@@ -1,0 +1,245 @@
+[33mcommit 6a81db117c2b1ccf471f668683928a92d64859a1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mAvinash-pitch-1[m[33m, [m[1;31morigin/Avinash-pitch-1[m[33m)[m
+Author: aavi4012-cmd <heyitzavinash@gmail.com>
+Date:   Sat Jun 28 13:42:14 2025 +0530
+
+    Add uploadController for prescription upload
+
+[33mcommit db59493e2f6788bdf58988acf965f64f49bc9b33[m[33m ([m[1;31morigin/your-branch-name[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32myour-branch-name[m[33m, [m[1;32mmain[m[33m)[m
+Merge: ea5add0 0f9591a
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Sat Jun 28 13:02:56 2025 +0530
+
+    Merge pull request #14 from AbhinavG786/addressModel.ts
+    
+    Add files via upload
+
+[33mcommit 0f9591acd3e344b8e5c8fdeb67380d52054efe05[m[33m ([m[1;31morigin/addressModel.ts[m[33m)[m
+Author: Ojal Rane <89273608+OjalRane@users.noreply.github.com>
+Date:   Fri Jun 27 18:07:45 2025 +0530
+
+    Add files via upload
+
+[33mcommit ea5add06149eaf942faad84ac74401e5cd1cfabf[m[33m ([m[1;31morigin/Avinash-valsco-1[m[33m)[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 16:53:11 2025 +0530
+
+    test user and admin apis and implement pagination
+
+[33mcommit b1e18a494e296dcb6ec86b605e4db32534d07541[m
+Merge: 09918bf b8098eb
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 15:21:08 2025 +0530
+
+    Merge pull request #9 from AbhinavG786/sid-feature
+    
+    [Siddharth] FIX:Tested all Notification APIs and made some changes in it
+
+[33mcommit 09918bf53b575138e0c67f88608dfc759a676790[m
+Merge: 9632588 238fb6d
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 15:19:41 2025 +0530
+
+    Merge pull request #8 from AbhinavG786/feature/mmy-feauture
+    
+    Feature/mmy feauture
+
+[33mcommit 238fb6d6422b97403e5c6f2ca900ec1eef9a466a[m[33m ([m[1;31morigin/feature/mmy-feauture[m[33m)[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 15:19:12 2025 +0530
+
+    some more fixes in payment controller
+
+[33mcommit e99dca1db0c045e7a771f3f07306e5711295be3f[m
+Merge: 4fc1e56 9632588
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 15:16:08 2025 +0530
+
+    fixed merge conflicts and payment schema
+
+[33mcommit b8098eba3bb31d5cf04797626140bb1b829d78ee[m[33m ([m[1;31morigin/sid-feature[m[33m)[m
+Author: Siddharth <siddharth1360.be21@chitkara.edu.in>
+Date:   Fri Jun 27 14:56:47 2025 +0530
+
+    [Siddharth] FIX:Tested all Notification APIs and made some changes in it for better functionality
+
+[33mcommit 4fc1e56c887f4a820e9adfdfbda9b4847d6bea86[m
+Author: PVSVASANTH2004 <ponukumativasanth@gmail.com>
+Date:   Fri Jun 27 13:50:34 2025 +0530
+
+    Added the Payment Schema
+
+[33mcommit 9632588d5e446489f10b071970cd55699b782a5b[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 13:38:22 2025 +0530
+
+    convert serviceAccountKey to base64
+
+[33mcommit 3adfae873c0ba31105a8fb41f4180995cee4afde[m[33m ([m[1;31morigin/feature/my-feature[m[33m)[m
+Author: PVSVASANTH2004 <ponukumativasanth@gmail.com>
+Date:   Fri Jun 27 13:36:04 2025 +0530
+
+    Added the Payment Schema
+
+[33mcommit 539ba449787dda6e46aad8790414ae5ebbe5ee80[m
+Merge: 55b2d28 3f2137b
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 13:03:07 2025 +0530
+
+    Merge pull request #6 from AbhinavG786/sid-feature
+    
+    [Siddharth] ADD:Added Subscription model and Notification APIs
+
+[33mcommit 3f2137b9500258694f0f820fb6f87785994bfc87[m
+Merge: 55b2d28 4c5f3b7
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Fri Jun 27 13:02:12 2025 +0530
+
+    fixed merge conflicts and notif schema
+
+[33mcommit 4c5f3b7c6c72a067f065675e37231e2af6dc97fd[m
+Author: Siddharth <siddharth1360.be21@chitkara.edu.in>
+Date:   Fri Jun 27 10:13:38 2025 +0530
+
+    [Siddharth] ADD:Added Subscription model and Notification APIs
+
+[33mcommit 55b2d2860dae33358d76b1c8ff6a153fe19e0ecd[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:39:33 2025 +0530
+
+    more bug fixes
+
+[33mcommit 641eafb608e10b201e748f68c25dcd9d820c3289[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:32:54 2025 +0530
+
+    filename fixes
+
+[33mcommit 0b3ac940c3059c5050004af67d1f3e29827761b9[m
+Merge: 27f1669 b6ded60
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:30:25 2025 +0530
+
+    Merge pull request #5 from AbhinavG786/tessaract
+    
+    tessaract implemented(not tested for now)
+
+[33mcommit b6ded60145751dae8d797334f5c67e51f2d1f12f[m[33m ([m[1;31morigin/tessaract[m[33m)[m
+Merge: 5fab541 27f1669
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:29:29 2025 +0530
+
+    fix merge conflicts in package-lock.json
+
+[33mcommit 27f1669825f53749f29f05bcb7687a154bf8077e[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:13:51 2025 +0530
+
+    fix cart schema
+
+[33mcommit 5fab5412adf0e358bf8edd3be279872428419f0f[m
+Author: AjayGaur <gaurajay787@gmail.com>
+Date:   Thu Jun 26 17:08:53 2025 +0530
+
+    tessaract implemented(not tested for now)
+
+[33mcommit 05bb14dad7bb0e7c5677ae5d26c7b73e9d28a2e2[m
+Merge: 11180e0 af45e67
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:07:49 2025 +0530
+
+    Merge pull request #4 from AbhinavG786/Cart/changes
+    
+    cartschema
+
+[33mcommit af45e673aa381f56d19a68bf39d98a463f534337[m[33m ([m[1;31morigin/Cart/changes[m[33m)[m
+Merge: a7ea234 11180e0
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:07:22 2025 +0530
+
+    fix merge conflicts
+
+[33mcommit a7ea234a321b7f63b078b60c5c7800a102217cdc[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 17:05:51 2025 +0530
+
+    fix
+
+[33mcommit 11180e07a252bc559b69ad4f1d4ac4dfca14fb32[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 16:55:44 2025 +0530
+
+    Implement firebase auth for email&google , setup auth middleware and admin controller operations and other bug fixes
+
+[33mcommit c070f14c50ab1e878cd5ca40d5132a5a6bf52788[m
+Author: AjayGaur <gaurajay787@gmail.com>
+Date:   Thu Jun 26 16:03:31 2025 +0530
+
+    cartschema
+
+[33mcommit 0d261deb887c9adab3d3bcc3dd99e4e14f02b6f5[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 12:50:17 2025 +0530
+
+    fix some bugs
+
+[33mcommit 380fa9186812e398568e54a52ae703d5307d1719[m
+Merge: 5e296ba 770da0d
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 12:45:08 2025 +0530
+
+    Merge pull request #3 from AbhinavG786/feature/my-feature
+    
+    Added Recommondation Schema
+
+[33mcommit 770da0d355da0c8f8a488eb2a49887d0f99a465a[m
+Merge: 963a860 5e296ba
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 12:44:48 2025 +0530
+
+    fixed merge conflicts
+
+[33mcommit 963a86047abb45e2a808f98916771f9c1d24f1c3[m
+Author: PVSVASANTH2004 <ponukumativasanth@gmail.com>
+Date:   Thu Jun 26 11:50:35 2025 +0530
+
+    Added Recommondation Schema
+
+[33mcommit 5e296ba534feba250f310f7bced9638433c39543[m
+Merge: 009fe79 1a31496
+Author: Abhinav Gupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 02:11:14 2025 +0530
+
+    Merge pull request #2 from AbhinavG786/sid-feature
+    
+    Sid feature
+
+[33mcommit 1a31496e08e611526b582fac30abeb952cfd32c2[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 02:08:02 2025 +0530
+
+    add product model, controller crud ops and routes
+
+[33mcommit eb48cd9de08f226362f12b9430b788c037ab9fa8[m
+Merge: a0d83f3 009fe79
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 02:06:34 2025 +0530
+
+    Merge branch 'main' of https://github.com/AbhinavG786/ValscoLensKart into sid-feature
+
+[33mcommit 009fe7961730c6916247e780cb78b9333b676f5a[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Thu Jun 26 01:32:20 2025 +0530
+
+    Add User CRUD operations
+
+[33mcommit a0d83f3fd3b3ffd9eca375178d53504d9e6b239e[m
+Author: Siddharth <siddharth1360.be21@chitkara.edu.in>
+Date:   Wed Jun 25 20:52:22 2025 +0530
+
+    [Siddharth] ADD: Added Product Schema and its controller
+
+[33mcommit 320efc8599747fcc9e1c1ae69d1068c4031f2de0[m
+Author: AbhinavGupta <bengupta786@gmail.com>
+Date:   Wed Jun 25 20:25:47 2025 +0530
+
+    Setup typescript config and folder structure with mongoatlas connected and user model d
