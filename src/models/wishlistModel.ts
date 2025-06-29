@@ -1,5 +1,5 @@
 import mongoose, { Schema, InferSchemaType } from "mongoose";
-
+ 
 const wishlistSchema = new Schema(
   {
     userId: {

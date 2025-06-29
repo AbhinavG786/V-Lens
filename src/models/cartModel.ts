@@ -1,5 +1,5 @@
 import mongoose, { Schema, InferSchemaType, model } from "mongoose";
-
+ 
 const cartItemSchema = new Schema(
   {
     productId: {
