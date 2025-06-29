@@ -11,7 +11,7 @@ import inventoryRoutes from "./inventoryRoutes";
 import addressRoutes from "./addressRoutes";
 import roomRoutes from "./roomRoutes";
 import wishlistRoutes from "./wishlistRoutes";
-
+import reviewRoutes from "./reviewRoutes";
 
 const router = Router();
 
@@ -27,5 +27,6 @@ router.use("/admin", inventoryRoutes);
 router.use("/address", addressRoutes);
 router.use("/room", roomRoutes);
 router.use("/wishlist", wishlistRoutes);
+router.use("/reviews", reviewRoutes);
 
 export default router;
