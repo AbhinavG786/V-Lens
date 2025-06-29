@@ -12,7 +12,6 @@ const createMessage = async (data: any) => {
   }
 };
 
-
 export const SocketServiceInit = (server:any) => {
   const io = new Server(server, { cors: { origin: "*" } });
   console.log("Socket server is serving")
