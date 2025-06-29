@@ -4,6 +4,7 @@ import productRoutes from "./productRoutes"
 import recommendationRoutes from "./recommendationRoutes"
 import prescriptionRoutes from "./prescriptionRoutes"
 import authRoutes from "./authRoutes"
+import orderRoutes from "./orderRoutes"
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use("/recommendations", recommendationRoutes);
 router.use("/product", productRoutes);
 router.use("/prescription", prescriptionRoutes);
 router.use("/auth", authRoutes);
+router.use("/orders", orderRoutes);
 
 export default router;
