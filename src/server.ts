@@ -5,6 +5,7 @@ import cors from "cors";
 import connectDB from "./database/connection";
 import router from "./routes/index"; 
 import cookieParser from "cookie-parser";
+import { SocketServiceInit } from "./utils/socket-server";
 
 const app = express();
 
@@ -26,6 +27,7 @@ connectDB();
 const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
+SocketServiceInit(server);
 server.listen(PORT, () => {
   console.log("Server is running on port", PORT);
 });
