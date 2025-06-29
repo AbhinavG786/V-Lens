@@ -4,7 +4,6 @@ import productRoutes from "./productRoutes"
 import recommendationRoutes from "./recommendationRoutes"
 import prescriptionRoutes from "./prescriptionRoutes"
 import authRoutes from "./authRoutes"
-<<<<<<< HEAD
 import paymentRoutes from "./paymentRoutes"
 import notificationRoutes from "./notificationRoutes";
 import adminRoutes from "./adminRoutes";
@@ -13,10 +12,7 @@ import addressRoutes from "./addressRoutes";
 import roomRoutes from "./roomRoutes";
 import wishlistRoutes from "./wishlistRoutes";
 import reviewRoutes from "./reviewRoutes";
-
-=======
 import orderRoutes from "./orderRoutes"
->>>>>>> subham/features
 
 const router = Router();
 
@@ -25,7 +21,6 @@ router.use("/recommendations", recommendationRoutes);
 router.use("/product", productRoutes);
 router.use("/prescription", prescriptionRoutes);
 router.use("/auth", authRoutes);
-<<<<<<< HEAD
 router.use("/payments", paymentRoutes);
 router.use("/notification",notificationRoutes);
 router.use("/admin", adminRoutes);
@@ -34,8 +29,6 @@ router.use("/address", addressRoutes);
 router.use("/room", roomRoutes);
 router.use("/wishlist", wishlistRoutes);
 router.use("/reviews", reviewRoutes);
-=======
 router.use("/orders", orderRoutes);
->>>>>>> subham/features
 
 export default router;

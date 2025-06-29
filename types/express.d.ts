@@ -8,7 +8,13 @@ declare global {
 
     interface Request {
       // user?: User;
-       user?: admin.auth.DecodedIdToken
+       user?: admin.auth.DecodedIdToken;
+       admin?: {
+         uid: string;
+         email: string;
+         fullName: string;
+         isAdmin: boolean;
+       };
     }
   }
 }

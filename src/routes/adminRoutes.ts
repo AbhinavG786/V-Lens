@@ -1,13 +1,19 @@
 import admin from "../controllers/adminController"
 import { Router } from "express";
-import paginationMiddleware from "../middlewares/paginationMiddleware";
+import AdminAuthMiddleware from "../middlewares/adminAuth";
 
-const router= Router();
+const router = Router();
 
-router.route("/all").get(paginationMiddleware(10,50),admin.getAllUsers)
-router.route("/:userId").get(admin.getUserById)
-router.route("/:userId").patch(admin.updateUser)
-router.route("/:userId").delete(admin.deleteUser)
+// All admin routes require admin authentication
+router.use(AdminAuthMiddleware.verifyAdminSession);
 
+// Dashboard and analytics
+router.route("/dashboard").get(admin.getDashboardStats);
+router.route("/analytics/orders").get(admin.getOrderAnalytics);
+
+// User management
+router.route("/users").get(admin.getAllUsers);
+router.route("/users/:userId/admin-status").patch(admin.updateUserAdminStatus);
+router.route("/users/:userId").delete(admin.deleteUser);
 
 export default router;
