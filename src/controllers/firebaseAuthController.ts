@@ -37,6 +37,11 @@ class FirebaseAuthController {
      res.status(400).json({ error: "Phone number is required for new user." });
      return
   }
+   const globalPhoneRegex = /^\+[1-9]\d{1,14}$/;
+if (!globalPhoneRegex.test(phone)) {
+   res.status(400).json({ error: "Invalid phone number. Use E.164 format, e.g., +14155552671" });
+   return
+}
         user = await User.create({
           firebaseUID: decoded.uid,
           email: decoded.email,
