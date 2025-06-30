@@ -15,6 +15,7 @@ import searchRoutes from "./searchRoutes";
 import reviewRoutes from "./reviewRoutes";
 import orderRoutes from "./orderRoutes";
 import cartRoutes from "./cartRoutes";
+import lensRoutes from "./lensRoutes";
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use("/search",searchRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/orders", orderRoutes);
 router.use("/cart", cartRoutes);
+router.use("/lens", lensRoutes);
 
 export default router;
