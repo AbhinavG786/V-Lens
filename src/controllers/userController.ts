@@ -21,7 +21,7 @@ class UserController {
   };
 
   updateUser = async (req: express.Request, res: express.Response) => {
-    const { fullName, email, gender } = req.body;
+    const { fullName, email, gender,phone } = req.body;
     const firebaseUID=req.user?.uid;
     if (!firebaseUID) {
       res.status(400).json({ message: "Firebase ID is required" });
@@ -31,6 +31,7 @@ class UserController {
         const updatedData: any = {};
         if (fullName) updatedData.fullName = fullName;
         if (email) updatedData.email = email;
+        if (phone) updatedData.phone = phone;
         
         if (gender) {
           const allowedGenders = (User.schema.path('gender') as any).enumValues;

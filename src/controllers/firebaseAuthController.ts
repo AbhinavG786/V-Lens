@@ -4,7 +4,7 @@ import { User } from "../models/userModel";
 
 class FirebaseAuthController {
   login = async (req: express.Request, res: express.Response) => {
-    const { fullName,idToken } = req.body;
+    const { fullName,idToken ,phone} = req.body;
     if (!idToken) {
       res.status(400).json({ error: "ID token required" });
       return;
@@ -33,11 +33,16 @@ class FirebaseAuthController {
      res.status(400).json({ error: "Full name is required for new user." });
      return
   }
+  if(!phone) {
+     res.status(400).json({ error: "Phone number is required for new user." });
+     return
+  }
         user = await User.create({
           firebaseUID: decoded.uid,
           email: decoded.email,
           fullName: Name,
           loginMethod: provider === "google.com" ? "google" : "email",
+          phone: phone,
           addresses: [],
           wishlist: [],
           prescriptions: [],
