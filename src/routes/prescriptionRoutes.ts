@@ -1,8 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import prescription from '../controllers/prescriptionController';
+import upload from '../middlewares/upload';
 
-const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
 
 router.post('/', upload.single('image'), (req, res, next) => {
