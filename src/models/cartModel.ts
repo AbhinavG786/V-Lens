@@ -22,7 +22,6 @@ const cartSchema = new Schema(
       type: String,
       required: true,
       ref: "User",
-      index: true,
     },
     items: {
       type: [cartItemSchema],

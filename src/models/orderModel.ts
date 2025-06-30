@@ -34,7 +34,6 @@ const orderSchema = new Schema(
       type: String,
       required: true,
       ref: "User",
-      index: true,
     },
     orderNumber: {
       type: String,

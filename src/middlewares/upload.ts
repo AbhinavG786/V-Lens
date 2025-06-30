@@ -4,10 +4,10 @@ import cloudinary from '../utils/cloudinary';
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: {
+  params: async (req, file) => ({
     folder: 'prescriptions',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
-  },
+    format: ['jpg', 'png', 'jpeg', 'pdf'], // 'format' instead of 'allowed_formats'
+  }),
 });
 
 const upload = multer({ storage });
