@@ -1,6 +1,6 @@
 
 import { Request, Response } from 'express';
-import Store from '../models/store';
+import Store from '../models/storeModel';
 
 export const findNearby = async (req: Request, res: Response) => {
   const { lat, lng, radius = 5000 } = req.query;

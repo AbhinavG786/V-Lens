@@ -6,6 +6,14 @@ const LensSchema = new Schema(
       type: String,
       required: true,
     },
+    color:{
+      type: String,
+      required: true,
+    },
+    power:{
+      type: String,
+      required: true,
+    },
     type: {
       type: String,
       enum: ["contact", "glasses", "sunglasses"],

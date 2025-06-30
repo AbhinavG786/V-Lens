@@ -3,8 +3,8 @@ import express from "express";
 
 class LensController {
   createLens = async (req: express.Request, res: express.Response) => {
-    const { brand, type, price, stock, description, imageUrl } = req.body;
-    if (!brand || !type || !price || !stock || !description || !imageUrl) {
+    const { brand, type, price, stock, description, imageUrl,color,power } = req.body;
+    if (!brand || !type || !price || !stock || !description || !imageUrl || !color || !power) {
       res.status(400).json({ message: "All fields are required" });
       return;
     }
@@ -16,6 +16,8 @@ class LensController {
         stock,
         description,
         imageUrl,
+        color,
+        power
       });
       const savedLens = await newLens.save();
       res
@@ -120,7 +122,7 @@ class LensController {
 
   updateLens = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
-    const { brand, type, price, stock, description, imageUrl } = req.body;
+    const { brand, type, price, stock, description, imageUrl,color,power } = req.body;
     try {
       const updatedData: any = {};
       if (brand) updatedData.brand = brand;
@@ -137,6 +139,8 @@ class LensController {
       if (stock) updatedData.stock = stock;
       if (description) updatedData.description = description;
       if (imageUrl) updatedData.imageUrl = imageUrl;
+      if (color) updatedData.color = color;
+      if (power) updatedData.power = power;
       const updatedLens = await Lens.findByIdAndUpdate(lensId, updatedData, {
         new: true,
       });
