@@ -10,14 +10,14 @@ class PrescriptionController {
       return;
     }
 
-    const imagePath = file.path;
+    const imageUrl = file.path;
 
     try {
-      const result = await Tesseract.recognize(imagePath, "eng");
+      const result = await Tesseract.recognize(imageUrl, "eng");
       const extractedText = result.data.text;
 
       const newDoc = await Prescription.create({
-        imageUrl: imagePath,
+        imageUrl,
         extractedText,
       });
 
