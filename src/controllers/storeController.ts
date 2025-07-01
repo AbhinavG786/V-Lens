@@ -1,8 +1,7 @@
-
-import { Request, Response } from 'express';
+import express from 'express';
 import Store from '../models/storeModel';
 
-export const findNearby = async (req: Request, res: Response) => {
+export const findNearby = async (req: express.Request, res: express.Response) => {
   const { lat, lng, radius = 5000 } = req.query;
   if (!lat || !lng) return res.status(400).json({ error: 'Provide lat and lng' });
 
