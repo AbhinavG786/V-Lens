@@ -1,14 +1,27 @@
 import { Lens } from "../models/lensModel";
 import express from "express";
+import { uploadToCloudinary } from "../utils/cloudinary";
 
 class LensController {
   createLens = async (req: express.Request, res: express.Response) => {
-    const { brand, type, price, stock, description, imageUrl,color,power } = req.body;
-    if (!brand || !type || !price || !stock || !description || !imageUrl || !color || !power) {
+    const { brand, type, price, stock, description, color, power } = req.body;
+    if (!brand || !type || !price || !stock || !description || !color || !power) {
       res.status(400).json({ message: "All fields are required" });
       return;
     }
+    if (!req.file) {
+      res.status(400).json({ message: "Image file is required" });
+      return;
+    }
     try {
+      let imageUrl: string;
+      try {
+        imageUrl = await uploadToCloudinary(req.file.path);
+      } catch (cloudErr) {
+        console.error("Cloudinary upload error:", cloudErr);
+        res.status(500).json({ message: "Image upload failed" });
+        return;
+      }
       const newLens = new Lens({
         brand,
         type,
@@ -122,7 +135,7 @@ class LensController {
 
   updateLens = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
-    const { brand, type, price, stock, description, imageUrl,color,power } = req.body;
+    const { brand, type, price, stock, description, color, power } = req.body;
     try {
       const updatedData: any = {};
       if (brand) updatedData.brand = brand;
@@ -138,9 +151,17 @@ class LensController {
       if (price) updatedData.price = price;
       if (stock) updatedData.stock = stock;
       if (description) updatedData.description = description;
-      if (imageUrl) updatedData.imageUrl = imageUrl;
       if (color) updatedData.color = color;
       if (power) updatedData.power = power;
+      if (req.file) {
+        try {
+          updatedData.imageUrl = await uploadToCloudinary(req.file.path);
+        } catch (cloudErr) {
+          console.error("Cloudinary upload error:", cloudErr);
+          res.status(500).json({ message: "Image upload failed" });
+          return;
+        }
+      }
       const updatedLens = await Lens.findByIdAndUpdate(lensId, updatedData, {
         new: true,
       });
