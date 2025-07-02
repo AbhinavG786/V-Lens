@@ -301,6 +301,39 @@ class OrderController {
       res.status(500).json({ message: "Error fetching orders", error });
     }
   };
+
+
+
+trackOrder = async (req: express.Request, res: express.Response): Promise<void> => {
+  const { orderNumber } = req.params;
+  const firebaseUID = req.user?.uid;
+
+  if (!orderNumber) {
+    res.status(400).json({ message: "Order number is required" });
+    return;
+  }
+  if (!firebaseUID) {
+    res.status(400).json({ message: "Firebase ID is required" });
+    return;
+  }
+  try {
+    const order = await Order.findOne({ orderNumber, userId: firebaseUID })
+      .select("orderNumber status trackingNumber estimatedDelivery notes items shippingAddress createdAt")
+      .populate("items.productId", "name image price finalPrice")
+      .lean();
+
+    if (!order) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+    res.status(200).json({ success: true, order });
+  } catch (error) {
+    console.error("Track order error:", error);
+    res.status(500).json({ message: "Error tracking order", error });
+  }
+};
+
+
 }
 
 export default new OrderController();
