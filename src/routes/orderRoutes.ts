@@ -10,6 +10,7 @@ router.route("/").post(FirebaseAuthMiddleware.verifySessionCookie, orderControll
 router.route("/").get(FirebaseAuthMiddleware.verifySessionCookie, orderController.getOrdersByUser);
 router.route("/:id").get(FirebaseAuthMiddleware.verifySessionCookie, orderController.getOrderById);
 router.route("/:id/cancel").patch(FirebaseAuthMiddleware.verifySessionCookie, orderController.cancelOrder);
+router.route("/track/:orderNumber").get(FirebaseAuthMiddleware.verifySessionCookie, orderController.trackOrder);
 
 // Admin routes - require admin authentication
 router.route("/admin/all").get(AdminAuthMiddleware.verifyAdminSession, orderController.getAllOrders);
