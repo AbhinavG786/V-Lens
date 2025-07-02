@@ -1,9 +1,30 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, InferSchemaType } from "mongoose";
 
-const PrescriptionSchema = new Schema({
-  imageUrl: String,
-  extractedText: String,
-  createdAt: { type: Date, default: Date.now }
-});
+const PrescriptionSchema = new Schema(
+  {
+    imageUrl: {
+      type: String,
+      required: true,
+    },
+    imagePublicId: {
+      type: String,
+      required: true,
+    },
+    extractedText: {
+      type: String,
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
 
-export const Prescription = model('Prescription', PrescriptionSchema);
+type PrescriptionType = InferSchemaType<typeof PrescriptionSchema>;
+
+export const Prescription = model<PrescriptionType>(
+  "Prescription",
+  PrescriptionSchema
+);
