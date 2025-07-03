@@ -31,8 +31,19 @@ class PaymentController {
 
   getAllPayments = async (req: Request, res: Response) => {
     try {
-      const payments = await Payment.find().sort({ paidAt: -1 });
-      res.status(200).json(payments);
+      const { skip = 0, take = 10 } = (req as any).pagination || {};
+      const payments = await Payment.find()
+        .sort({ paidAt: -1 })
+        .skip(Number(skip))
+        .limit(Number(take));
+      const total = await Payment.countDocuments();
+      res.status(200).json({
+        data: payments,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch payments', error });
     }
