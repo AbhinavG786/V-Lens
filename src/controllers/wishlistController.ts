@@ -3,6 +3,7 @@ import { Wishlist } from "../models/wishlistModel";
 import { User } from "../models/userModel";
 import { Product } from "../models/productModel";
 import mongoose from "mongoose";
+import paginationMiddleware from "../middlewares/paginationMiddleware";
 
 class WishlistController {
   // Add product to wishlist
@@ -86,6 +87,7 @@ class WishlistController {
     try {
       const { userId } = req.params;
       const { source, isFavorite, sortBy = "addedAt", sortOrder = "desc" } = req.query;
+      const { skip = 0, take = 10 } = req.pagination || {};
 
       if (!userId) {
         res.status(400).json({ message: "User ID is required" });
@@ -106,11 +108,9 @@ class WishlistController {
 
       // Build query
       const query: any = { userId };
-      
       if (source) {
         query.source = source;
       }
-      
       if (isFavorite !== undefined) {
         query.isFavorite = isFavorite === "true";
       }
@@ -122,11 +122,18 @@ class WishlistController {
       // Get wishlist items with populated product details
       const wishlistItems = await Wishlist.find(query)
         .populate("productId")
-        .sort(sortObj);
+        .sort(sortObj)
+        .skip(Number(skip))
+        .limit(Number(take));
+      const total = await Wishlist.countDocuments(query);
 
       res.status(200).json({
         message: "Wishlist retrieved successfully",
         count: wishlistItems.length,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
         filters: { source, isFavorite, sortBy, sortOrder },
         wishlist: wishlistItems,
       });
