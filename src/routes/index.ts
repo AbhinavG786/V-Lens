@@ -16,6 +16,7 @@ import reviewRoutes from "./reviewRoutes";
 import orderRoutes from "./orderRoutes";
 import cartRoutes from "./cartRoutes";
 import lensRoutes from "./lensRoutes";
+import secureAdminRoutes from "./secureAdminRoutes";
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use("/reviews", reviewRoutes);
 router.use("/orders", orderRoutes);
 router.use("/cart", cartRoutes);
 router.use("/lens", lensRoutes);
+router.use("/secure-admin", secureAdminRoutes);
 
 export default router;
