@@ -5,6 +5,4 @@ const router = Router();
 
 router.get('/stores/nearby', findNearby);
 
-router.route("/user/:userId").get(paginationMiddleware(10, 50), wishlist.getUserWishlist);
-
 export default router;

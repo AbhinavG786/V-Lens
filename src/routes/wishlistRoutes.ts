@@ -1,5 +1,6 @@
 import wishlist from "../controllers/wishlistController";
 import { Router } from "express";
+import paginationMiddleware from "../middlewares/paginationMiddleware";
 
 const router = Router();
 
@@ -7,7 +8,7 @@ const router = Router();
 router.route("/add").post(wishlist.addToWishlist);
 
 // Get user's wishlist (with optional filters)
-router.route("/user/:userId").get(wishlist.getUserWishlist);
+router.route("/user/:userId").get(paginationMiddleware(10, 50),wishlist.getUserWishlist);
 
 // Remove product from wishlist
 router.route("/user/:userId/product/:productId").delete(wishlist.removeFromWishlist);
