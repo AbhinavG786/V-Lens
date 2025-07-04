@@ -25,9 +25,14 @@ const frameSchema = new Schema(
       enum: ["men", "women", "unisex"],
       default: "unisex",
     },
-    image: {
+    imageUrl: {
       type: String,
+      required: true,
     },
+    imagePublicId:{
+      type:String,
+      required: true,
+    }
   },
   { timestamps: true }
 );

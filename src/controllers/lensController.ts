@@ -1,11 +1,30 @@
 import { Lens } from "../models/lensModel";
 import express from "express";
 import cloudinary from "../utils/cloudinary";
+import { uploadBufferToCloudinary } from "../utils/cloudinary";
 
 class LensController {
   createLens = async (req: express.Request, res: express.Response) => {
-    const { brand, type, price, stock, description, color, power ,folder="lens"} = req.body;
-    if (!brand || !type || !price || !stock || !description || !color || !power) {
+    const {
+      brand,
+      type,
+      price,
+      stock,
+      description,
+      color,
+      power,
+      folder = "lens",
+    } = req.body;
+    const folderType = req.body.folder || req.query.folder || "others";
+    if (
+      !brand ||
+      !type ||
+      !price ||
+      !stock ||
+      !description ||
+      !color ||
+      !power
+    ) {
       res.status(400).json({ message: "All fields are required" });
       return;
     }
@@ -13,19 +32,28 @@ class LensController {
       res.status(400).json({ message: "Image file is required" });
       return;
     }
-    const imageUrl = req.file.path;
-    const imagePublicId = req.file.filename;
+
     try {
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        folderType
+      );
+
+      if (!uploaded) {
+        res.status(500).json({ message: "Failed to upload image" });
+        return;
+      }
       const newLens = new Lens({
         brand,
         type,
         price,
         stock,
         description,
-        imageUrl,
-        imagePublicId,
+        imageUrl: uploaded.secure_url,
+        imagePublicId: uploaded.public_id,
         color,
-        power
+        power,
       });
       const savedLens = await newLens.save();
       res
@@ -130,13 +158,23 @@ class LensController {
 
   updateLens = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
-    const { brand, type, price, stock, description, color, power,folder="lens" } = req.body;
+    const {
+      brand,
+      type,
+      price,
+      stock,
+      description,
+      color,
+      power,
+      folder = "lens",
+    } = req.body;
+    const folderType = req.body.folder || req.query.folder || "others";
     try {
       const lens = await Lens.findById(lensId);
-    if (!lens) {
-       res.status(404).json({ message: "Lens not found" });
-       return
-    }
+      if (!lens) {
+        res.status(404).json({ message: "Lens not found" });
+        return;
+      }
       const updatedData: any = {};
       if (brand) updatedData.brand = brand;
       if (type) {
@@ -155,21 +193,31 @@ class LensController {
       if (power) updatedData.power = power;
       if (req.file) {
         if (lens.imagePublicId) {
-        await cloudinary.uploader.destroy(lens.imagePublicId);
-      }
+          await cloudinary.uploader.destroy(lens.imagePublicId);
+        }
         try {
-          const imageUrl=req.file.path
-          const imagePublicId = req.file.filename;
+          const uploaded = await uploadBufferToCloudinary(
+            req.file.buffer,
+            req.file.originalname,
+            folderType
+          );
+
+          if (!uploaded) {
+            res.status(500).json({ message: "Failed to upload image" });
+            return;
+          }
+          const imageUrl = uploaded.secure_url;
+          const imagePublicId = uploaded.public_id;
           updatedData.imagePublicId = imagePublicId;
-          updatedData.imageUrl = imageUrl
+          updatedData.imageUrl = imageUrl;
         } catch (cloudErr) {
           console.error("Cloudinary upload error:", cloudErr);
           res.status(500).json({ message: "Image upload failed" });
           return;
         }
       }
-       Object.assign(lens, updatedData);
-    const updatedLens = await lens.save();
+      Object.assign(lens, updatedData);
+      const updatedLens = await lens.save();
       if (!updatedLens) {
         res.status(404).json({ message: "Updated Lens not found" });
         return;
@@ -194,7 +242,7 @@ class LensController {
       if (lens.imagePublicId) {
         await cloudinary.uploader.destroy(lens.imagePublicId);
       }
-       await lens.deleteOne();
+      await lens.deleteOne();
       res.status(204).json({ message: "Lens deleted successfully" });
     } catch (error) {
       console.error("Error deleting lens:", error);
