@@ -7,7 +7,7 @@ import redisClient from "../utils/redis";
 
 class FirebaseAuthController {
   login = async (req: express.Request, res: express.Response) => {
-    const { fullName,idToken ,phone} = req.body;
+    const { fullName,idToken ,phone,isAdmin=false} = req.body;
     if (!idToken) {
       res.status(400).json({ error: "ID token required" });
       return;
@@ -51,6 +51,7 @@ if (!globalPhoneRegex.test(phone)) {
           fullName: Name,
           loginMethod: provider === "google.com" ? "google" : "email",
           phone: phone,
+          isAdmin: isAdmin,
           addresses: [],
           wishlist: [],
           prescriptions: [],
