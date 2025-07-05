@@ -5,23 +5,23 @@ const productSchema = new Schema(
     type: {
       type: String,
       required: true,
-      enum: ["eyeglasses", "sunglasses", "lenses", "accessories"],
+      enum: ["eyeglasses", "sunglasses", "lenses", "accessories","frames"],
     },
     name: {
       type: String,
       required: true,
     },
-    brand: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-    },
-    price: {
-      type: Number,
-      required: true,
-    },
+    // brand: {
+    //   type: String,
+    //   required: true,
+    // },
+    // description: {
+    //   type: String,
+    // },
+    // price: {
+    //   type: Number,
+    //   required: true,
+    // },
     discount: {
       type: Number,
       default: 0,
@@ -30,18 +30,18 @@ const productSchema = new Schema(
       type: Number,
       required: true,
     },
-    images: [
-      {
-        type: String,
-        required: true,
-      },
-    ],
-    variants: [
-      {
-        color: { type: String },
-        stock: { type: Number, default: 0 },
-      },
-    ],
+    // images: [
+    //   {
+    //     type: String,
+    //     required: true,
+    //   },
+    // ],
+    // variants: [
+    //   {
+    //     color: { type: String },
+    //     stock: { type: Number, default: 0 },
+    //   },
+    // ],
     tags: [
       {
         type: String,
@@ -51,12 +51,16 @@ const productSchema = new Schema(
       average: { type: Number, default: 0 },
       count: { type: Number, default: 0 },
       reviews: [
+        // {
+        //   userId: { type: Schema.Types.ObjectId, ref: "User" },
+        //   rating: { type: Number },
+        //   comment: { type: String },
+        //   createdAt: { type: Date, default: Date.now },
+        // },
         {
-          userId: { type: Schema.Types.ObjectId, ref: "User" },
-          rating: { type: Number },
-          comment: { type: String },
-          createdAt: { type: Date, default: Date.now },
-        },
+        type: Schema.Types.ObjectId,
+        ref:"Review",
+        }
       ],
     },
     // tryOn3DModel: {
@@ -65,13 +69,26 @@ const productSchema = new Schema(
     gender: {
       type: String,
       enum: ["men", "women", "unisex"],
+      default: "unisex",
     },
-    frameShape: {
-      type: String,
+    lensRef:{
+      type: Schema.Types.ObjectId,
+      ref: "Lens",
     },
-    material: {
-      type: String,
+    frameRef: {
+      type: Schema.Types.ObjectId,
+      ref: "Frame",
     },
+    accessoriesRef: {
+      type: Schema.Types.ObjectId,
+      ref: "Accessories",
+    }
+    // frameShape: {
+    //   type: String,
+    // },
+    // material: {
+    //   type: String,
+    // },
   },
   { timestamps: true }
 );

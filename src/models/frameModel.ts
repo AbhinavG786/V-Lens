@@ -2,8 +2,20 @@ import mongoose, { Schema, InferSchemaType } from "mongoose";
 
 const frameSchema = new Schema(
   {
-    name: {
+    // name: {
+    //   type: String,
+    //   required: true,
+    // },
+    brand: {
       type: String,
+      required: true,
+    },
+     description: {
+      type: String,
+      required: true, 
+    },
+     price: {
+      type: Number,
       required: true,
     },
     shape: {
@@ -16,15 +28,21 @@ const frameSchema = new Schema(
     },
     color: {
       type: String,
+      required: true,
     },
     size: {
       type: String, 
+      required: true,
     },
-    gender: {
-      type: String,
-      enum: ["men", "women", "unisex"],
-      default: "unisex",
+    stock: {
+      type: Number,
+      required: true,
     },
+    // gender: {
+    //   type: String,
+    //   enum: ["men", "women", "unisex"],
+    //   default: "unisex",
+    // },
     imageUrl: {
       type: String,
       required: true,

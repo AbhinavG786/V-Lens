@@ -38,7 +38,7 @@ const LensSchema = new Schema(
     imagePublicId:{
       type:String,
       required: true,
-    }
+    },
   },
   {
     timestamps: true,

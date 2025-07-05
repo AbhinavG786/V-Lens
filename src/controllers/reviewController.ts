@@ -6,9 +6,9 @@ import express from "express";
 class ReviewController {
   createReview = async (req: express.Request, res: express.Response) => {
     const { productId, rating, comment } = req.body;
-    const userId = req.user?.uid;
+    const firebaseUID = req.user?.uid;
 
-    if (!userId) {
+    if (!firebaseUID) {
       res.status(401).json({ message: "Authentication required" });
       return;
     }
@@ -28,7 +28,7 @@ class ReviewController {
     }
 
     try {
-      const user = await User.findOne({ firebaseUID: userId });
+      const user = await User.findOne({ firebaseUID: firebaseUID });
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;

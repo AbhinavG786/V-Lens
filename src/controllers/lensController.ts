@@ -1,4 +1,5 @@
 import { Lens } from "../models/lensModel";
+import { Product } from "../models/productModel";
 import express from "express";
 import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
@@ -13,6 +14,10 @@ class LensController {
       description,
       color,
       power,
+      name,
+      discount,
+      tags,
+      gender,
       folder = "lens",
     } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
@@ -56,9 +61,23 @@ class LensController {
         power,
       });
       const savedLens = await newLens.save();
-      res
-        .status(201)
-        .json({ message: "Lens created successfully", lens: savedLens });
+
+      const newProduct = new Product({
+        type: "lenses",
+        name,
+        discount,
+        finalPrice:
+          discount > 0 ? Math.round(price - (price * discount) / 100) : price,
+        tags,
+        gender,
+        lensRef: savedLens._id,
+      });
+      const savedProduct = await newProduct.save();
+      res.status(201).json({
+        message: "Lens and Product created successfully",
+        lens: savedLens,
+        product: savedProduct,
+      });
     } catch (error) {
       console.error("Error creating lens:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -156,7 +175,7 @@ class LensController {
     }
   };
 
-  updateLens = async (req: express.Request, res: express.Response) => {
+  updateLensProduct = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
     const {
       brand,
@@ -166,6 +185,10 @@ class LensController {
       description,
       color,
       power,
+      productType,
+      productName,
+      discount,
+      tags,
       folder = "lens",
     } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
@@ -222,9 +245,45 @@ class LensController {
         res.status(404).json({ message: "Updated Lens not found" });
         return;
       }
+      const updatedProductData: any = {};
+      if (productType) {
+        const allowedProductTypes = (Product.schema.path("type") as any)
+          .enumValues;
+        if (allowedProductTypes.includes(productType)) {
+          updatedProductData.type = productType;
+        } else {
+          res.status(400).json({ message: `Invalid product type value.` });
+          return;
+        }
+      }
+      if (productName) updatedProductData.name = productName;
+      if (discount) {
+        updatedProductData.discount = discount;
+        updatedProductData.finalPrice =
+          discount > 0
+            ? Math.round(
+                updatedLens.price - (updatedLens.price * discount) / 100
+              )
+            : updatedLens.price;
+      }
+      if (tags) updatedProductData.tags = tags;
+      const updatedProduct = await Product.findOneAndUpdate(
+        { lensRef: lensId },
+        updatedProductData,
+        { new: true }
+      );
+      if (!updatedProduct) {
+        res.status(404).json({ message: "Updated Product not found" });
+        return;
+      }
+
       res
         .status(200)
-        .json({ message: "Lens updated successfully", lens: updatedLens });
+        .json({
+          message: "Lens updated successfully",
+          lens: updatedLens,
+          product: updatedProduct,
+        });
     } catch (error) {
       console.error("Error updating lens:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -243,7 +302,10 @@ class LensController {
         await cloudinary.uploader.destroy(lens.imagePublicId);
       }
       await lens.deleteOne();
-      res.status(204).json({ message: "Lens deleted successfully" });
+      await Product.findOneAndDelete({ lensRef: lensId });
+      res
+        .status(204)
+        .json({ message: "Lens and Product deleted successfully" });
     } catch (error) {
       console.error("Error deleting lens:", error);
       res.status(500).json({ message: "Internal server error" });
