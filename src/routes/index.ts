@@ -1,6 +1,6 @@
 import { Router } from "express"
 import userRoutes from "./userRoutes"
-import productRoutes from "./productRoutes"
+// import productRoutes from "./productRoutes"
 import recommendationRoutes from "./recommendationRoutes"
 import prescriptionRoutes from "./prescriptionRoutes"
 import authRoutes from "./authRoutes"
@@ -17,13 +17,14 @@ import orderRoutes from "./orderRoutes";
 import cartRoutes from "./cartRoutes";
 import lensRoutes from "./lensRoutes";
 import frameRoutes from "./frameRoutes";
+import accessoriesRoutes from "./accessoriesRoutes";
 
 
 const router = Router();
 
 router.use("/user", userRoutes);
 router.use("/recommendations", recommendationRoutes);
-router.use("/product", productRoutes);
+// router.use("/product", productRoutes);
 router.use("/prescription", prescriptionRoutes);
 router.use("/auth", authRoutes);
 router.use("/payments", paymentRoutes);
@@ -39,5 +40,6 @@ router.use("/orders", orderRoutes);
 router.use("/cart", cartRoutes);
 router.use("/lens", lensRoutes);
 router.use("/frame", frameRoutes);
+router.use("/accessories", accessoriesRoutes);
 
 export default router;

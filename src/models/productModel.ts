@@ -82,6 +82,14 @@ const productSchema = new Schema(
     accessoriesRef: {
       type: Schema.Types.ObjectId,
       ref: "Accessories",
+    },
+    sunglassesRef: {
+      type: Schema.Types.ObjectId,
+      ref: "Sunglasses",
+    },
+    eyeglassesRef: {
+      type: Schema.Types.ObjectId,
+      ref: "Eyeglasses",
     }
     // frameShape: {
     //   type: String,

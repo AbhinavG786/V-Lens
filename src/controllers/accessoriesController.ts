@@ -1,34 +1,28 @@
-import { Lens } from "../models/lensModel";
+import { Accessories } from "../models/accessoriesModel";
 import { Product } from "../models/productModel";
 import express from "express";
 import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 
-class LensController {
-  createLens = async (req: express.Request, res: express.Response) => {
+class AccessoriesController {
+  createAccessories = async (req: express.Request, res: express.Response) => {
     const {
       brand,
-      type,
       price,
       stock,
       description,
-      color,
-      power,
       name,
       discount,
       tags,
       gender,
-      folder = "lens",
+      folder = "accessories",
     } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
     if (
       !brand ||
-      !type ||
       !price ||
       !stock ||
-      !description ||
-      !color ||
-      !power
+      !description
     ) {
       res.status(400).json({ message: "All fields are required" });
       return;
@@ -49,173 +43,119 @@ class LensController {
         res.status(500).json({ message: "Failed to upload image" });
         return;
       }
-      const newLens = new Lens({
+      const newAccessories = new Accessories({
         brand,
-        type,
         price,
         stock,
         description,
         imageUrl: uploaded.secure_url,
         imagePublicId: uploaded.public_id,
-        color,
-        power,
       });
-      const savedLens = await newLens.save();
+      const savedAccessories = await newAccessories.save();
 
       const newProduct = new Product({
-        type: "lenses",
+        type: "accessories",
         name,
         discount,
         finalPrice:
           discount > 0 ? Math.round(price - (price * discount) / 100) : price,
         tags,
         gender,
-        lensRef: savedLens._id,
+        accessoriesRef: savedAccessories._id,
       });
       const savedProduct = await newProduct.save();
       res.status(201).json({
-        message: "Lens and Product created successfully",
-        lens: savedLens,
+        message: "Accessories and Product created successfully",
+        accessories: savedAccessories,
         product: savedProduct,
       });
     } catch (error) {
-      console.error("Error creating lens:", error);
+      console.error("Error creating accessories:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  getAllLens = async (req: express.Request, res: express.Response) => {
+  getAllAccessories = async (req: express.Request, res: express.Response) => {
     const { skip, take } = req.pagination!;
     try {
-      const lenses = await Lens.find().skip(Number(skip)).limit(Number(take));
-      const total = await Lens.countDocuments();
+      const accessories = await Accessories.find().skip(Number(skip)).limit(Number(take));
+      const total = await Accessories.countDocuments();
       res.status(200).json({
-        data: lenses,
+        data: accessories,
         total,
         skip: Number(skip),
         take: Number(take),
         totalPages: Math.ceil(total / Number(take)),
       });
     } catch (error) {
-      console.error("Error fetching lenses:", error);
+      console.error("Error fetching accessories:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  getLensById = async (req: express.Request, res: express.Response) => {
-    const { lensId } = req.params;
+  getAccessoriesById = async (req: express.Request, res: express.Response) => {
+    const { accessoriesId } = req.params;
     try {
-      const lens = await Lens.findById(lensId);
-      res.status(200).json(lens);
+      const accessories = await Accessories.findById(accessoriesId);
+      res.status(200).json(accessories);
     } catch (error) {
-      console.error("Error fetching lenses:", error);
+      console.error("Error fetching accessories:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  getLensByBrand = async (req: express.Request, res: express.Response) => {
+  getAccessoriesByBrand = async (req: express.Request, res: express.Response) => {
     const { brand } = req.query;
     const { skip, take } = req.pagination!;
     try {
-      const lenses = await Lens.find({ brand: brand })
+      const accessories = await Accessories.find({ brand: brand })
         .skip(Number(skip))
         .limit(Number(take));
-      const total = await Lens.countDocuments();
-      if (lenses.length === 0) {
-        res.status(404).json({ message: "No lenses found for this brand" });
+      const total = await Accessories.countDocuments();
+      if (accessories.length === 0) {
+        res.status(404).json({ message: "No accessories found for this brand" });
         return;
       }
       res.status(200).json({
-        data: lenses,
+        data: accessories,
         total,
         skip: Number(skip),
         take: Number(take),
         totalPages: Math.ceil(total / Number(take)),
       });
     } catch (error) {
-      console.error("Error fetching lenses by brand:", error);
+      console.error("Error fetching accessories by brand:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  getLensByType = async (req: express.Request, res: express.Response) => {
-    const { type } = req.query;
-    const { skip, take } = req.pagination!;
-    if (!type) {
-      res.status(400).json({ message: "Type is required" });
-      return;
-    }
-    if (type) {
-      const allowedTypes = (Lens.schema.path("type") as any).enumValues;
-      if (allowedTypes.includes(type)) {
-        try {
-          const lenses = await Lens.find({ type: type })
-            .skip(Number(skip))
-            .limit(Number(take));
-          const total = await Lens.countDocuments();
-          if (lenses.length === 0) {
-            res.status(404).json({ message: "No lenses found for this type" });
-            return;
-          }
-          res.status(200).json({
-            data: lenses,
-            total,
-            skip: Number(skip),
-            take: Number(take),
-            totalPages: Math.ceil(total / Number(take)),
-          });
-        } catch (error) {
-          console.error("Error fetching lenses by type:", error);
-          res.status(500).json({ message: "Internal server error" });
-        }
-      } else {
-        res.status(400).json({ message: `Invalid type value.` });
-        return;
-      }
-    }
-  };
-
-  updateLensProduct = async (req: express.Request, res: express.Response) => {
-    const { lensId } = req.params;
+  updateAccessoriesProduct = async (req: express.Request, res: express.Response) => {
+    const { accessoriesId } = req.params;
     const {
       brand,
-      type,
       price,
       stock,
       description,
-      color,
-      power,
       productName,
       discount,
       tags,
-      folder = "lens",
+      folder = "accessories",
     } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
     try {
-      const lens = await Lens.findById(lensId);
-      if (!lens) {
-        res.status(404).json({ message: "Lens not found" });
+      const accessories = await Accessories.findById(accessoriesId);
+      if (!accessories) {
+        res.status(404).json({ message: "Accessories not found" });
         return;
       }
       const updatedData: any = {};
       if (brand) updatedData.brand = brand;
-      if (type) {
-        const allowedTypes = (Lens.schema.path("type") as any).enumValues;
-        if (allowedTypes.includes(type)) {
-          updatedData.type = type;
-        } else {
-          res.status(400).json({ message: `Invalid type value.` });
-          return;
-        }
-      }
       if (price) updatedData.price = price;
       if (stock) updatedData.stock = stock;
       if (description) updatedData.description = description;
-      if (color) updatedData.color = color;
-      if (power) updatedData.power = power;
       if (req.file) {
-        if (lens.imagePublicId) {
-          await cloudinary.uploader.destroy(lens.imagePublicId);
+        if (accessories.imagePublicId) {
+          await cloudinary.uploader.destroy(accessories.imagePublicId);
         }
         try {
           const uploaded = await uploadBufferToCloudinary(
@@ -238,10 +178,10 @@ class LensController {
           return;
         }
       }
-      Object.assign(lens, updatedData);
-      const updatedLens = await lens.save();
-      if (!updatedLens) {
-        res.status(404).json({ message: "Updated Lens not found" });
+      Object.assign(accessories, updatedData);
+      const updatedAccessories = await accessories.save();
+      if (!updatedAccessories) {
+        res.status(404).json({ message: "Updated Accessories not found" });
         return;
       }
       const updatedProductData: any = {};
@@ -251,13 +191,13 @@ class LensController {
         updatedProductData.finalPrice =
           discount > 0
             ? Math.round(
-                updatedLens.price - (updatedLens.price * discount) / 100
+                updatedAccessories.price - (updatedAccessories.price * discount) / 100
               )
-            : updatedLens.price;
+            : updatedAccessories.price;
       }
       if (tags) updatedProductData.tags = tags;
       const updatedProduct = await Product.findOneAndUpdate(
-        { lensRef: lensId },
+        { accessoriesRef: accessoriesId },
         updatedProductData,
         { new: true }
       );
@@ -269,39 +209,39 @@ class LensController {
       res
         .status(200)
         .json({
-          message: "Lens updated successfully",
-          lens: updatedLens,
+          message: "Accessories updated successfully",
+          accessories: updatedAccessories,
           product: updatedProduct,
         });
     } catch (error) {
-      console.error("Error updating lens:", error);
+      console.error("Error updating accessories:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  deleteLens = async (req: express.Request, res: express.Response) => {
-    const { lensId } = req.params;
+  deleteAccessories = async (req: express.Request, res: express.Response) => {
+    const { accessoriesId } = req.params;
     try {
-      const lens = await Lens.findById(lensId);
-      if (!lens) {
-        res.status(404).json({ message: "Lens not found" });
+      const accessories = await Accessories.findById(accessoriesId);
+      if (!accessories) {
+        res.status(404).json({ message: "Accessories not found" });
         return;
       }
-      if (lens.imagePublicId) {
-        await cloudinary.uploader.destroy(lens.imagePublicId);
+      if (accessories.imagePublicId) {
+        await cloudinary.uploader.destroy(accessories.imagePublicId);
       }
-      await lens.deleteOne();
-      await Product.findOneAndDelete({ lensRef: lensId });
+      await accessories.deleteOne();
+      await Product.findOneAndDelete({ accessoriesRef: accessoriesId });
       res
         .status(204)
-        .json({ message: "Lens and Product deleted successfully" });
+        .json({ message: "Accessories and Product deleted successfully" });
     } catch (error) {
-      console.error("Error deleting lens:", error);
+      console.error("Error deleting accessories:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  getLensByPriceRange = async (req: express.Request, res: express.Response) => {
+  getAccessoriesByPriceRange = async (req: express.Request, res: express.Response) => {
     const { minPrice, maxPrice } = req.query;
     const { skip, take } = req.pagination!;
     if (!minPrice || !maxPrice) {
@@ -311,7 +251,7 @@ class LensController {
       return;
     }
     try {
-      const lenses = await Lens.find({
+      const accessories = await Accessories.find({
         price: {
           $gte: parseFloat(minPrice as string),
           $lte: parseFloat(maxPrice as string),
@@ -319,25 +259,25 @@ class LensController {
       })
         .skip(Number(skip))
         .limit(Number(take));
-      const total = await Lens.countDocuments();
-      if (lenses.length === 0) {
+      const total = await Accessories.countDocuments();
+      if (accessories.length === 0) {
         res
           .status(404)
-          .json({ message: "No lenses found in this price range" });
+          .json({ message: "No accessories found in this price range" });
         return;
       }
       res.status(200).json({
-        data: lenses,
+        data: accessories,
         total,
         skip: Number(skip),
         take: Number(take),
         totalPages: Math.ceil(total / Number(take)),
       });
     } catch (error) {
-      console.error("Error fetching lenses by price range:", error);
+      console.error("Error fetching accessories by price range:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 }
 
-export default new LensController();
+export default new AccessoriesController();

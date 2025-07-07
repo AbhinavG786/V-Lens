@@ -2,6 +2,7 @@ import { Order } from "../models/orderModel";
 import { Cart } from "../models/cartModel";
 import { Product } from "../models/productModel";
 import express from "express";
+import { Lens } from "../models/lensModel";
 
 class OrderController {
   createOrder = async (req: express.Request, res: express.Response) => {
@@ -44,8 +45,12 @@ class OrderController {
           return;
         }
         
+        const populatedProduct = await product.populate<{ lensRef: { price: number } | null }>('lensRef', 'price');
         const itemTotal = product.finalPrice * item.quantity;
-        const itemDiscount = (product.price - product.finalPrice) * item.quantity;
+        const lensPrice = populatedProduct.lensRef && typeof populatedProduct.lensRef === 'object' && 'price' in populatedProduct.lensRef
+          ? populatedProduct.lensRef.price
+          : product.finalPrice;
+        const itemDiscount = (lensPrice - product.finalPrice) * item.quantity;
         
         totalAmount += itemTotal;
         discountAmount += itemDiscount;

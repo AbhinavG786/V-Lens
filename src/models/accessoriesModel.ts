@@ -1,22 +1,9 @@
 import mongoose, { Schema, InferSchemaType } from "mongoose";
 
-const LensSchema = new Schema(
+const AccessoriesSchema = new Schema(
   {
     brand: {
       type: String,
-      required: true,
-    },
-    color:{
-      type: String,
-      required: true,
-    },
-    power:{
-      type: String,
-      required: true,
-    },
-    type: {
-      type: String,
-      enum: ["contact", "glasses", "sunglasses"],
       required: true,
     },
     price: {
@@ -45,6 +32,6 @@ const LensSchema = new Schema(
   }
 );
 
-type LensType = InferSchemaType<typeof LensSchema>;
+type AccessoriesType = InferSchemaType<typeof AccessoriesSchema>;
 
-export const Lens = mongoose.model<LensType>("Lens", LensSchema);
+export const Accessories = mongoose.model<AccessoriesType>("Accessories", AccessoriesSchema);
