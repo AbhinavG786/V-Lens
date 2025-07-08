@@ -18,10 +18,10 @@ const productSchema = new Schema(
     // description: {
     //   type: String,
     // },
-    // price: {
-    //   type: Number,
-    //   required: true,
-    // },
+    price: {
+      type: Number,
+      required: true,
+    },
     discount: {
       type: Number,
       default: 0,
@@ -82,7 +82,11 @@ const productSchema = new Schema(
     accessoriesRef: {
       type: Schema.Types.ObjectId,
       ref: "Accessories",
-    }
+    },
+    sunglassRef: {
+      type: Schema.Types.ObjectId,
+      ref: "Sunglass",
+    },
     // frameShape: {
     //   type: String,
     // },
