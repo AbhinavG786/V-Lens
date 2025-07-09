@@ -186,6 +186,7 @@ class LensController {
       color,
       power,
       productName,
+      gender,
       discount,
       tags,
       folder = "lens",
@@ -246,6 +247,12 @@ class LensController {
       }
       const updatedProductData: any = {};
       if (productName) updatedProductData.name = productName;
+      if (gender) {
+        const allowedGenders = (Product.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          updatedProductData.gender = gender;
+        }
+      }
       if (discount) {
         updatedProductData.discount = discount;
         updatedProductData.finalPrice =
@@ -266,13 +273,11 @@ class LensController {
         return;
       }
 
-      res
-        .status(200)
-        .json({
-          message: "Lens updated successfully",
-          lens: updatedLens,
-          product: updatedProduct,
-        });
+      res.status(200).json({
+        message: "Lens updated successfully",
+        lens: updatedLens,
+        product: updatedProduct,
+      });
     } catch (error) {
       console.error("Error updating lens:", error);
       res.status(500).json({ message: "Internal server error" });

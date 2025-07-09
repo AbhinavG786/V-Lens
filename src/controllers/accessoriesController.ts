@@ -139,6 +139,7 @@ class AccessoriesController {
       productName,
       discount,
       tags,
+      gender,
       folder = "accessories",
     } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
@@ -186,6 +187,12 @@ class AccessoriesController {
       }
       const updatedProductData: any = {};
       if (productName) updatedProductData.name = productName;
+      if(gender){
+        const allowedGenders = (Product.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {  
+          updatedProductData.gender=gender;
+        }
+      }
       if (discount) {
         updatedProductData.discount = discount;
         updatedProductData.finalPrice =
