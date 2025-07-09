@@ -1,172 +1,217 @@
 import { Request, Response } from "express";
 import { Frame } from "../models/frameModel";
+import { Product } from "../models/productModel";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import cloudinary from "../utils/cloudinary";
 
 class FrameController {
     createFrame = async (req: Request, res: Response) => {
-        const { name, shape, material, color, size, gender, folder="frame" } = req.body;
+        const {
+        brand,
+        shape,
+        material,
+        color,
+        size,
+        stock,
+        price,
+        description,
+        name,
+        discount,
+        tags,
+        gender,
+        folder = "frame",
+        } = req.body;
+
         const folderType = req.body.folder || req.query.folder || "others";
 
-        if (!name || !shape || !material || !color || !size || !gender) {
+        if (!brand || !shape || !material || !color || !size || !stock ||!price || !description) {
             res.status(400).json({ message: "Missing required fields" });
             return;
         }
 
-        if(!req.file){
+        if (!req.file) {
             res.status(400).json({ message: "Image file is required" });
             return;
         }
 
         try {
-             const uploaded = await uploadBufferToCloudinary(
-      req.file.buffer,
-      req.file.originalname,
-      folderType
-    );
+        const uploaded = await uploadBufferToCloudinary(
+            req.file.buffer,
+            req.file.originalname,
+            folderType
+        );
 
-    if (!uploaded) {
-       res.status(500).json({ message: "Failed to upload image" });
-       return
-    }
+        if (!uploaded) {
+                res.status(500).json({ message: "Image upload failed" });
+                return;
+        }
+
         const frame = await Frame.create({
-            name,
+            brand,
             shape,
             material,
             color,
             size,
-            gender,
+            stock,
+            price,
+            description,
             imageUrl: uploaded.secure_url,
             imagePublicId: uploaded.public_id,
         });
 
-        res.status(201).json(frame);
+        const product = await Product.create({
+            type: "frames",
+            name,
+            discount,
+            finalPrice: discount > 0 ? Math.round(price - (price * discount) / 100) : price,
+            tags,
+            gender,
+            frameRef: frame._id,
+        });
+
+        res.status(201).json({
+            message: "Frame and Product created successfully",
+            frame,
+            product,
+        });
         } catch (error) {
-            res.status(500).json({ message: "Error creating frame", error });
-            return;
+        console.error("Error creating frame:", error);
+        res.status(500).json({ message: "Internal server error" });
         }
     };
 
     getAllFrames = async (_req: Request, res: Response) => {
         try {
-            const frames = await Frame.find().sort({ createdAt: -1 });
-            res.status(200).json(frames);
-            return;
+        const frames = await Frame.find().sort({ createdAt: -1 });
+        res.status(200).json(frames);
         } catch (error) {
-            res.status(500).json({ message: "Error fetching frames", error });
-            return;
+        res.status(500).json({ message: "Error fetching frames", error });
         }
     };
 
     getFrameById = async (req: Request, res: Response) => {
         const { id } = req.params;
 
-        if (!id) {
-            res.status(400).json({ message: "Missing ID parameter" });
-            return;
-        }
-
-        try{
-            const frame = await Frame.findById(id);
-            if (!frame) {
+        try {
+        const frame = await Frame.findById(id);
+        if (!frame) {
                 res.status(404).json({ message: "Frame not found" });
                 return;
-            }
-            res.status(200).json(frame);
+        }
+        res.status(200).json(frame);
         } catch (error) {
-            res.status(500).json({ message: "Error fetching frame", error });
-            return;
+        res.status(500).json({ message: "Error fetching frame", error });
         }
     };
 
     updateFrame = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { name, shape, material, color, size, gender, folder="frame" } = req.body;
+        const {
+        brand,
+        shape,
+        material,
+        color,
+        size,
+        stock,
+        price,
+        description,
+        productName,
+        discount,
+        tags,
+        gender,
+        folder = "frame",
+        } = req.body;
+
         const folderType = req.body.folder || req.query.folder || "others";
 
-        if (!id) {
-            res.status(400).json({ message: "Missing ID parameter" });
-            return;
-        }
-
+        try {
         const frame = await Frame.findById(id);
         if (!frame) {
-            res.status(404).json({ message: "Frame not found" });
-            return;
+                res.status(404).json({ message: "Frame not found" });
+                return;
         }
 
-        try {
-            const updatedData: any = {}
-            if (name) updatedData.name = name;
-            if (shape) updatedData.shape = shape;
-            if (material) updatedData.material = material;
-            if (color) updatedData.color = color;
-            if (size) updatedData.size = size;
-              if (gender) {
-                    const allowedTypes = (Frame.schema.path("type") as any).enumValues;
-                    if (allowedTypes.includes(gender)) {
-                      updatedData.gender = gender;
-                    } else {
-                      res.status(400).json({ message: `Invalid gender value.` });
-                      return;
-                    }
-                  }
-                  if(req.file){
-            if (frame.imagePublicId) {
-                await cloudinary.uploader.destroy(frame.imagePublicId);    
-                   }
-                    const uploaded = await uploadBufferToCloudinary(
-      req.file.buffer,
-      req.file.originalname,
-      folderType
-    );
+        const updatedData: any = {};
+        if (brand) updatedData.brand = brand;
+        if (shape) updatedData.shape = shape;
+        if (material) updatedData.material = material;
+        if (color) updatedData.color = color;
+        if (size) updatedData.size = size;
+        if (stock) updatedData.stock = stock;
+        if (price) updatedData.price = price;
+        if (description) updatedData.description = description;
 
-    if (!uploaded) {
-       res.status(500).json({ message: "Failed to upload image" });
-       return
-    }
+        if (req.file) {
+            if (frame.imagePublicId) {
+            await cloudinary.uploader.destroy(frame.imagePublicId);
+            }
+
+            const uploaded = await uploadBufferToCloudinary(
+            req.file.buffer,
+            req.file.originalname,
+            folderType
+            );
+
+            if (!uploaded) {
+                res.status(500).json({ message: "Image upload failed" });
+                return;
+            }
+
             updatedData.imageUrl = uploaded.secure_url;
             updatedData.imagePublicId = uploaded.public_id;
-                  }
-        Object.assign(frame, updatedData);
-        const updated = await frame.save();
-
-        if (!updated) {
-            res.status(404).json({ message: "Frame not found" });
-            return;
         }
 
-            res.status(200).json(updated);
+        Object.assign(frame, updatedData);
+        const updatedFrame = await frame.save();
+
+        const updatedProductData: any = {};
+        if (productName) updatedProductData.name = productName;
+        if (discount) {
+            updatedProductData.discount = discount;
+            updatedProductData.finalPrice = discount > 0
+            ? Math.round(updatedFrame.price - (updatedFrame.price * discount) / 100)
+            : updatedFrame.price;
+        }
+        if (tags) updatedProductData.tags = tags;
+        if (gender) updatedProductData.gender = gender;
+
+        const updatedProduct = await Product.findOneAndUpdate(
+            { frameRef: id },
+            updatedProductData,
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: "Frame updated successfully",
+            frame: updatedFrame,
+            product: updatedProduct,
+        });
         } catch (error) {
-            res.status(500).json({ message: "Error updating frame", error });
-            return;
+        res.status(500).json({ message: "Error updating frame", error });
         }
     };
 
     deleteFrame = async (req: Request, res: Response) => {
         const { id } = req.params;
 
-        if (!id) {
-            res.status(400).json({ message: "Missing ID parameter" });
-            return;
-        }
-
+        try {
         const frame = await Frame.findById(id);
         if (!frame) {
             res.status(404).json({ message: "Frame not found" });
             return;
         }
 
-        try {
-            if (frame.imagePublicId) {
-                await cloudinary.uploader.destroy(frame.imagePublicId);
-            }
-            await frame.deleteOne();
+        if (frame.imagePublicId) {
+            await cloudinary.uploader.destroy(frame.imagePublicId);
+        }
 
-            res.status(204).json({ message: "Frame deleted successfully" });
-        } catch (error) {
+        await frame.deleteOne();
+        await Product.findOneAndDelete({ frameRef: id });
+
+        res.status(204).json({ message: "Frame and associated product deleted successfully" });
+        } 
+        catch (error) {
             res.status(500).json({ message: "Error deleting frame", error });
-            return;
         }
     };
 }
