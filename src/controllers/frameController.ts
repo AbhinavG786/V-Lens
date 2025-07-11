@@ -173,7 +173,14 @@ class FrameController {
             : updatedFrame.price;
         }
         if (tags) updatedProductData.tags = tags;
-        if (gender) updatedProductData.gender = gender;
+        
+        const allowedGenders = ["men", "women", "unisex"];
+        if (gender && allowedGenders.includes(gender)) {
+            updatedProductData.gender = gender;
+        } else if (gender) {
+            res.status(400).json({ message: "Invalid gender value" });
+            return;
+        }
 
         const updatedProduct = await Product.findOneAndUpdate(
             { frameRef: id },
