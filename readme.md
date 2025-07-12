@@ -11,7 +11,7 @@ Valsco Backend LensKart
 | POST   | `/create`        | Create new frame + product       | `multipart/form-data`| ✅ `"file"`  |createFrame | Admin
 | GET    | `/all`           | Get all frames                   | -                    | ❌           |getAllFrames| User
 | GET    | `/:id`           | Get frame by ID                  | -                    | ❌           |getFrameById| User
-| PATCH    | `/:id`           | Update frame + product info      | `multipart/form-data`| ✅ `"image"` |updateFrame | Admin
+| PATCH  | `/:id`           | Update frame + product info      | `multipart/form-data`| ✅ `"image"` |updateFrame | Admin
 | DELETE | `/:id`           | Delete frame + image             | -                    | ❌           |deleteFrame | Admin
 
 
@@ -24,7 +24,7 @@ Valsco Backend LensKart
 | POST   | `/`              | Create new lens + product        | `multipart/form-data`| ✅ `"file"`  |createLens          | Admin
 | GET    | `/all`           | Get all lens                     | -                    | ❌           |getAllLens          | User
 | GET    | `/:lensId`       | Get lens by ID                   | -                    | ❌           |getLensById         | User
-| PATCH    | `/:lensId`       | Update lens + product info       | `multipart/form-data`| ✅ `"file"`  |updateLensProduct   | Admin
+| PATCH  | `/:lensId`       | Update lens + product info       | `multipart/form-data`| ✅ `"file"`  |updateLensProduct   | Admin
 | DELETE | `/:lensId`       | Delete lens + image              | -                    | ❌           |deleteLens          | Admin
 | GET    | `/brand`         | Get lens by Brand                | -                    | ❌           |getLensByBrand      | User
 | GET    | `/type`          | Get lens by Type                 | -                    | ❌           |getLensByType       | User
@@ -41,7 +41,7 @@ Valsco Backend LensKart
 | POST   | `/`              | Create new accessories + product | `multipart/form-data`| ✅ `"file"`  |createAccessories          | Admin
 | GET    | `/all`           | Get all accessories              | -                    | ❌           |getAllAccessories          | User
 | GET    | `/:accessoriesId`| Get accessories by ID            | -                    | ❌           |getAccessoriesById         | User
-| PATCH    | `/:accessoriesId`| Update accessories + product info| `multipart/form-data`| ✅ `"file"`  |updateAccessoriesProduct   | Admin
+| PATCH  | `/:accessoriesId`| Update accessories + product info| `multipart/form-data`| ✅ `"file"`  |updateAccessoriesProduct   | Admin
 | DELETE | `/:accessoriesId`| Delete accessories + image       | -                    | ❌           |deleteAccessories          | Admin
 | GET    | `/brand`         | Get accessories by Brand         | -                    | ❌           |getAccessoriesByBrand      | User
 | GET    | `/priceRange`    | Get accessories by Price Range   | -                    | ❌           |getAccessoriesByPriceRange | User
