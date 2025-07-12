@@ -9,6 +9,7 @@ router.route("/create").post(firebaseAuth.verifySessionCookie,room.getOrCreateRo
 router.route("/message").post(upload.array('files'),room.createMessage)
 router.route("/end-chat").post(firebaseAuth.verifySessionCookie, room.endChat)
 router.route("/feedback").post(firebaseAuth.verifySessionCookie, room.submitFeedback)
+router.route("/:roomId/messages").get(firebaseAuth.verifySessionCookie, room.getRoomMessages)
 
 
 export default router

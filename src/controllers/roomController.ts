@@ -209,6 +209,29 @@ const firebaseUID = req.user?.uid;
       return;
     }
   };
+
+  getRoomMessages = async (req: express.Request, res: express.Response) => {
+    const { roomId } = req.params;
+    if (!roomId) {
+      res.status(400).json({ error: "Room ID is required" });
+      return;
+    }
+    try {
+      const messages = await Message.find({ roomId })
+        .populate("senderId", "fullName email")
+        .sort({ createdAt: 1 });
+        if(!messages || messages.length === 0) {
+          res.status(404).json({ error: "No messages found for this room" });
+          return;
+        }
+      res.status(200).json(messages);
+  }
+  catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+}
 }
 
 export default new RoomController();

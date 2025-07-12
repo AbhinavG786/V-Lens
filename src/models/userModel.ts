@@ -38,6 +38,12 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
+    imageUrl: {
+      type: String,
+    },
+    imagePublicId:{
+      type:String,
+    },
     addresses: [
       {
         type: Schema.Types.ObjectId,
