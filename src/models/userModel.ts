@@ -1,5 +1,5 @@
 import mongoose, { Schema, InferSchemaType } from "mongoose";
-import { ref } from "process";
+
 const userSchema = new Schema(
   {
     fullName: {
@@ -11,7 +11,7 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
-    phone:{
+    phone: {
       type: String,
       required: true,
       unique: true,
@@ -21,6 +21,10 @@ const userSchema = new Schema(
       enum: ["male", "female", "other"],
     },
     isAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    isAvailable: {
       type: Boolean,
       default: false,
     },
