@@ -1,20 +1,16 @@
-import express from "express";
+import * as express from "express";
 
-declare global {
-  namespace Express {
-    // interface User {
-    //   id: string;
-    // }
+// Only augment the Request interface, do not replace it
+// This preserves all standard Express typings
 
-    interface Request {
-      // user?: User;
-       user?: admin.auth.DecodedIdToken;
-       admin?: {
-         uid: string;
-         email: string;
-         fullName: string;
-         isAdmin: boolean;
-       };
-    }
+declare module "express" {
+  interface Request {
+    user?: admin.auth.DecodedIdToken;
+    admin?: {
+      uid: string;
+      email: string;
+      fullName: string;
+      isAdmin: boolean;
+    };
   }
 }
