@@ -103,4 +103,4 @@ Valsco Backend LensKart
 
 | Method | Endpoint        | Description                          | Request Type     | Image Upload | API Name        | ADMIN/USER |
 |--------|------------------|--------------------------------------|------------------|--------------|-----------------|------------|
-| GET    | `/search`      | Search products by name, brand, etc. | Query: `?query=rayban` | ❌       | searchProducts  | User/Admin |
+| GET    | `/products`      | Search products by name, brand, etc. | Query: `?query=rayban` | ❌       | searchProducts  | User/Admin |

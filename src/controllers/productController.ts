@@ -1,25 +1,52 @@
 import { Product } from "../models/productModel";
 import { Request, Response } from "express";
 import express from "express";
+import { SortOrder} from "mongoose";
 
 class ProductController {
     getTrendingProducts = async (req: Request, res: Response) => {
     try {
         const limit = parseInt(req.query.limit as string) || 10;
+        const sortBy = req.query.sortBy as string || "combined"; 
+
+        let sortOption: Record<string, number>;
+
+        switch (sortBy) {
+        case "reviews":
+            sortOption = { "ratings.count": -1 };
+            break;
+        case "ratings":
+            sortOption = { "ratings.average": -1 };
+            break;
+        case "combined":
+        default:
+            sortOption = {
+            "ratings.average": -1,
+            "ratings.count": -1,
+            };
+            break;
+        }
 
         const trending = await Product.find()
-        .sort({ "ratings.count": -1 }) // Most reviewed product
+        .sort({ "ratings.count": -1 } as Record<string, SortOrder>)
         .limit(limit)
+        .populate("ratings.reviews")
         .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
 
-        res.status(200).json({ message: "Trending products fetched", products: trending });
-        return;
+        res.status(200).json({
+        success: true,
+        message: "Trending products fetched successfully",
+        products: trending,
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error fetching trending products", error });
-        return;
+        console.error("Error fetching trending products:", error);
+        res.status(500).json({
+        success: false,
+        message: "Failed to fetch trending products",
+        error,
+        });
     }
     };
-
     getRandomProducts = async (req: Request, res: Response) => {
         try {
             const limit = parseInt(req.query.limit as string) || 10;
