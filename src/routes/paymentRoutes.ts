@@ -13,4 +13,4 @@ router.get('/', paginationMiddleware(10, 50), paymentController.getAllPayments);
 // GET /payments/:id
 router.get('/:id', paymentController.getPaymentById);
 
-export default router; 
+export default router;
