@@ -104,3 +104,20 @@ Valsco Backend LensKart
 | Method | Endpoint        | Description                          | Request Type     | Image Upload | API Name        | ADMIN/USER |
 |--------|------------------|--------------------------------------|------------------|--------------|-----------------|------------|
 | GET    | `/products`      | Search products by name, brand, etc. | Query: `?query=rayban` | ❌       | searchProducts  | User/Admin |
+
+
+# Order Routes API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/order`
+
+| Method | Endpoint                    | Description                              | Request Type          | Image Upload | API Name              | ADMIN/USER |
+|--------|-----------------------------|------------------------------------------|----------------------|--------------|-----------------------|------------|
+| POST   | `/`                         | Create new order                         | JSON                 | ❌           | createOrder           | User       |
+| GET    | `/`                         | Get all orders for user                  | -                    | ❌           | getOrdersByUser       | User       |
+| GET    | `/:id`                      | Get order by ID                          | -                    | ❌           | getOrderById          | User       |
+| PATCH  | `/:id/cancel`               | Cancel order by ID                       | -                    | ❌           | cancelOrder           | User       |
+| GET    | `/track/:orderNumber`       | Track order by order number              | -                    | ❌           | trackOrder            | User       |
+| GET    | `/admin/all`                | Get all orders (admin)                   | -                    | ❌           | getAllOrders          | Admin      |
+| PATCH  | `/:id/status`               | Update order status                      | JSON                 | ❌           | updateOrderStatus     | Admin      |
+| PATCH  | `/:id/payment`              | Update payment status for order          | JSON                 | ❌           | updatePaymentStatus   | Admin      |
+| PATCH  | `/:id/tracking`             | Add tracking info to order               | JSON                 | ❌           | addTrackingInfo       | Admin      |
