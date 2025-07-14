@@ -9,19 +9,27 @@ class WishlistController {
   // Add product to wishlist
   addToWishlist = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId, productId, source = "web", isFavorite = true } = req.body;
+      const { productId, source = "web", isFavorite = true } = req.body;
+      const firebaseUID = req.user?.uid;
 
-      if (!userId || !productId) {
-        res.status(400).json({ 
-          message: "Missing required fields: userId and productId" 
+      if (!firebaseUID) {
+        res.status(401).json({ 
+          message: "User not authenticated" 
         });
         return;
       }
 
-      // Validate ObjectIds
-      if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(productId)) {
+      if (!productId) {
         res.status(400).json({ 
-          message: "Invalid userId or productId format" 
+          message: "Missing required field: productId" 
+        });
+        return;
+      }
+
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        res.status(400).json({ 
+          message: "Invalid productId format" 
         });
         return;
       }
@@ -35,8 +43,8 @@ class WishlistController {
         return;
       }
 
-      // Check if user exists
-      const user = await User.findById(userId);
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
@@ -50,7 +58,7 @@ class WishlistController {
       }
 
       // Check if already in wishlist
-      const existingWishlistItem = await Wishlist.findOne({ userId, productId });
+      const existingWishlistItem = await Wishlist.findOne({ userId: user._id, productId });
       if (existingWishlistItem) {
         res.status(400).json({ message: "Product already in wishlist" });
         return;
@@ -58,7 +66,7 @@ class WishlistController {
 
       // Add to wishlist
       const wishlistItem = new Wishlist({
-        userId,
+        userId: user._id,
         productId,
         source,
         isFavorite,
@@ -85,29 +93,24 @@ class WishlistController {
   // Get user's wishlist
   getUserWishlist = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId } = req.params;
+      const firebaseUID = req.user?.uid;
       const { source, isFavorite, sortBy = "addedAt", sortOrder = "desc" } = req.query;
       const { skip = 0, take = 10 } = req.pagination || {};
 
-      if (!userId) {
-        res.status(400).json({ message: "User ID is required" });
+      if (!firebaseUID) {
+        res.status(401).json({ message: "User not authenticated" });
         return;
       }
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(400).json({ message: "Invalid user ID format" });
-        return;
-      }
-
-      // Check if user exists
-      const user = await User.findById(userId);
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
       }
 
       // Build query
-      const query: any = { userId };
+      const query: any = { userId: user._id };
       if (source) {
         query.source = source;
       }
@@ -149,31 +152,37 @@ class WishlistController {
   // Remove product from wishlist
   removeFromWishlist = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId, productId } = req.params;
+      const { productId } = req.params;
+      const firebaseUID = req.user?.uid;
 
-      if (!userId || !productId) {
+      if (!firebaseUID) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      if (!productId) {
         res.status(400).json({ 
-          message: "Missing required parameters: userId and productId" 
+          message: "Missing required parameter: productId" 
         });
         return;
       }
 
-      if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(productId)) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
         res.status(400).json({ 
-          message: "Invalid userId or productId format" 
+          message: "Invalid productId format" 
         });
         return;
       }
 
-      // Check if user exists
-      const user = await User.findById(userId);
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
       }
 
       // Remove from wishlist
-      const deletedItem = await Wishlist.findOneAndDelete({ userId, productId });
+      const deletedItem = await Wishlist.findOneAndDelete({ userId: user._id, productId });
 
       if (!deletedItem) {
         res.status(404).json({ message: "Product not found in wishlist" });
@@ -196,23 +205,36 @@ class WishlistController {
   // Check if product is in user's wishlist
   checkWishlistStatus = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId, productId } = req.params;
+      const { productId } = req.params;
+      const firebaseUID = req.user?.uid;
 
-      if (!userId || !productId) {
+      if (!firebaseUID) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      if (!productId) {
         res.status(400).json({ 
-          message: "Missing required parameters: userId and productId" 
+          message: "Missing required parameter: productId" 
         });
         return;
       }
 
-      if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(productId)) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
         res.status(400).json({ 
-          message: "Invalid userId or productId format" 
+          message: "Invalid productId format" 
         });
         return;
       }
 
-      const wishlistItem = await Wishlist.findOne({ userId, productId });
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+
+      const wishlistItem = await Wishlist.findOne({ userId: user._id, productId });
 
       res.status(200).json({
         isInWishlist: !!wishlistItem,
@@ -230,32 +252,43 @@ class WishlistController {
   // Update wishlist item (toggle favorite status, update source)
   updateWishlistItem = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId, productId } = req.params;
+      const { productId } = req.params;
       const { isFavorite, source } = req.body;
+      const firebaseUID = req.user?.uid;
 
-      if (!userId || !productId) {
+      if (!firebaseUID) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      if (!productId) {
         res.status(400).json({ 
-          message: "Missing required parameters: userId and productId" 
+          message: "Missing required parameter: productId" 
         });
         return;
       }
 
-      if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(productId)) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
         res.status(400).json({ 
-          message: "Invalid userId or productId format" 
+          message: "Invalid productId format" 
         });
         return;
       }
 
       // Validate source enum if provided
-      if (source) {
-        const validSources = ["web", "mobile", "android", "ios"];
-        if (!validSources.includes(source)) {
-          res.status(400).json({ 
-            message: "Invalid source. Must be one of: web, mobile, android, ios" 
-          });
-          return;
-        }
+      const validSources = ["web", "mobile", "android", "ios"];
+      if (source && !validSources.includes(source)) {
+        res.status(400).json({ 
+          message: "Invalid source. Must be one of: web, mobile, android, ios" 
+        });
+        return;
+      }
+
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
       }
 
       // Build update object
@@ -267,8 +300,9 @@ class WishlistController {
         updateObj.source = source;
       }
 
+      // Update wishlist item
       const updatedItem = await Wishlist.findOneAndUpdate(
-        { userId, productId },
+        { userId: user._id, productId },
         updateObj,
         { new: true }
       ).populate("productId");
@@ -291,36 +325,31 @@ class WishlistController {
     }
   };
 
-  // Clear entire wishlist for a user
+  // Clear entire wishlist for a user (with optional source filter)
   clearWishlist = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId } = req.params;
       const { source } = req.query;
+      const firebaseUID = req.user?.uid;
 
-      if (!userId) {
-        res.status(400).json({ message: "User ID is required" });
+      if (!firebaseUID) {
+        res.status(401).json({ message: "User not authenticated" });
         return;
       }
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(400).json({ message: "Invalid user ID format" });
-        return;
-      }
-
-      // Check if user exists
-      const user = await User.findById(userId);
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
       if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
       }
 
       // Build query
-      const query: any = { userId };
+      const query: any = { userId: user._id };
       if (source) {
         query.source = source;
       }
 
-      // Delete wishlist items for the user
+      // Delete wishlist items
       const result = await Wishlist.deleteMany(query);
 
       res.status(200).json({
@@ -337,29 +366,29 @@ class WishlistController {
     }
   };
 
-  // Get wishlist count for a user
+  // Get wishlist count for a user (with optional filters)
   getWishlistCount = async (req: express.Request, res: express.Response) => {
     try {
-      const { userId } = req.params;
       const { source, isFavorite } = req.query;
+      const firebaseUID = req.user?.uid;
 
-      if (!userId) {
-        res.status(400).json({ message: "User ID is required" });
+      if (!firebaseUID) {
+        res.status(401).json({ message: "User not authenticated" });
         return;
       }
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(400).json({ message: "Invalid user ID format" });
+      // Get user by Firebase UID
+      const user = await User.findOne({ firebaseUID });
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
         return;
       }
 
       // Build query
-      const query: any = { userId };
-      
+      const query: any = { userId: user._id };
       if (source) {
         query.source = source;
       }
-      
       if (isFavorite !== undefined) {
         query.isFavorite = isFavorite === "true";
       }
@@ -367,8 +396,8 @@ class WishlistController {
       const count = await Wishlist.countDocuments(query);
 
       res.status(200).json({
-        userId,
-        wishlistCount: count,
+        message: "Wishlist count retrieved successfully",
+        count,
         filters: { source, isFavorite },
       });
     } catch (error: any) {
@@ -380,7 +409,7 @@ class WishlistController {
     }
   };
 
-  // Get analytics data (for admin purposes)
+  // Get analytics data (admin endpoint)
   getWishlistAnalytics = async (req: express.Request, res: express.Response) => {
     try {
       const { startDate, endDate, source } = req.query;
@@ -404,43 +433,40 @@ class WishlistController {
 
       // Get analytics data
       const totalWishlistItems = await Wishlist.countDocuments(dateFilter);
-      const uniqueUsers = await Wishlist.distinct("userId", dateFilter);
-      const uniqueProducts = await Wishlist.distinct("productId", dateFilter);
-
-      // Get source distribution
-      const sourceDistribution = await Wishlist.aggregate([
+      const totalUsers = await Wishlist.distinct("userId", dateFilter).then(ids => ids.length);
+      const sourceBreakdown = await Wishlist.aggregate([
         { $match: dateFilter },
         { $group: { _id: "$source", count: { $sum: 1 } } },
         { $sort: { count: -1 } }
       ]);
 
-      // Get most wished products
-      const mostWishedProducts = await Wishlist.aggregate([
+      const favoriteBreakdown = await Wishlist.aggregate([
         { $match: dateFilter },
-        { $group: { _id: "$productId", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
+        { $group: { _id: "$isFavorite", count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]);
+
+      const dailyAdditions = await Wishlist.aggregate([
+        { $match: dateFilter },
         {
-          $lookup: {
-            from: "products",
-            localField: "_id",
-            foreignField: "_id",
-            as: "product"
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$addedAt" } },
+            count: { $sum: 1 }
           }
         },
-        { $unwind: "$product" }
+        { $sort: { _id: 1 } }
       ]);
 
       res.status(200).json({
         message: "Wishlist analytics retrieved successfully",
         analytics: {
           totalWishlistItems,
-          uniqueUsers: uniqueUsers.length,
-          uniqueProducts: uniqueProducts.length,
-          sourceDistribution,
-          mostWishedProducts,
+          totalUsers,
+          sourceBreakdown,
+          favoriteBreakdown,
+          dailyAdditions,
+          filters: { startDate, endDate, source },
         },
-        filters: { startDate, endDate, source },
       });
     } catch (error: any) {
       console.error("Error getting wishlist analytics:", error);
