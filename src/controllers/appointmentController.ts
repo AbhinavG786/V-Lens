@@ -8,24 +8,29 @@ class AppointmentController {
     const { type, storeLocation, address, date, timeSlot } = req.body;
 
     if (!firebaseUID || !type || !date || !timeSlot) {
-      return res.status(400).json({ message: "Missing required fields" });
+       res.status(400).json({ message: "Missing required fields" });
+       return
     }
 
     if (!["store", "home"].includes(type)) {
-      return res.status(400).json({ message: "Invalid appointment type" });
+       res.status(400).json({ message: "Invalid appointment type" });
+       return
     }
 
     if (type === "store" && !storeLocation) {
-      return res.status(400).json({ message: "Store location is required for store booking" });
+       res.status(400).json({ message: "Store location is required for store booking" });
+       return
     }
 
     if (type === "home" && !address) {
-      return res.status(400).json({ message: "Address is required for home booking" });
+       res.status(400).json({ message: "Address is required for home booking" });
+       return
     }
 
     try {
       const user = await User.findOne({ firebaseUID });
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) { res.status(404).json({ message: "User not found" });
+      return}
 
       const newAppointment = new Appointment({
         userId: user._id,
@@ -48,7 +53,8 @@ class AppointmentController {
 
     try {
       const user = await User.findOne({ firebaseUID });
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) { res.status(404).json({ message: "User not found" });
+      return}
 
       const appointments = await Appointment.find({ userId: user._id }).sort({ date: -1 });
       res.status(200).json(appointments);
@@ -92,7 +98,8 @@ class AppointmentController {
     const { status } = req.body;
 
     if (!appointmentId || !["approved", "completed", "cancelled"].includes(status)) {
-      return res.status(400).json({ message: "Invalid appointment status or ID" });
+       res.status(400).json({ message: "Invalid appointment status or ID" });
+       return
     }
 
     try {
@@ -101,7 +108,8 @@ class AppointmentController {
         { status },
         { new: true }
       );
-      if (!updated) return res.status(404).json({ message: "Appointment not found" });
+      if (!updated) { res.status(404).json({ message: "Appointment not found" });
+      return}
       res.status(200).json({ message: "Status updated", appointment: updated });
     } catch (error) {
       res.status(500).json({ message: "Error updating appointment", error });
@@ -114,10 +122,12 @@ class AppointmentController {
 
     try {
       const user = await User.findOne({ firebaseUID });
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user) { res.status(404).json({ message: "User not found" });
+      return}
 
       const appointment = await Appointment.findOne({ _id: appointmentId, userId: user._id });
-      if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+      if (!appointment) { res.status(404).json({ message: "Appointment not found" });
+      return}
 
       appointment.status = "cancelled";
       await appointment.save();

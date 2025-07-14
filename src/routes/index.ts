@@ -18,6 +18,8 @@ import cartRoutes from "./cartRoutes";
 import lensRoutes from "./lensRoutes";
 import frameRoutes from "./frameRoutes";
 import accessoriesRoutes from "./accessoriesRoutes";
+import sunglassRoutes from "./sunglassRoutes";
+import appointmentRoutes from "./appointmentRoutes";
 
 
 const router = Router();
@@ -41,5 +43,7 @@ router.use("/cart", cartRoutes);
 router.use("/lens", lensRoutes);
 router.use("/frame", frameRoutes);
 router.use("/accessories", accessoriesRoutes);
+router.use("/sunglasses", sunglassRoutes);
+router.use("/appointments", appointmentRoutes);
 
 export default router;

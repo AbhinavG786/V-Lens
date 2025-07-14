@@ -85,7 +85,7 @@ const productSchema = new Schema(
     },
     sunglassesRef: {
       type: Schema.Types.ObjectId,
-      ref: "Sunglasses",
+      ref: "Sunglass",
     },
     eyeglassesRef: {
       type: Schema.Types.ObjectId,
