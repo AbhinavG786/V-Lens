@@ -18,5 +18,4 @@ router.route("/:sunglassId").patch(adminAuth.verifyAdminSession,upload.single('f
 router.route("/:sunglassId").delete(adminAuth.verifyAdminSession,Sunglass.deleteSunglass);
 
 
-
 export default router;

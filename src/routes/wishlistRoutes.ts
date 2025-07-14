@@ -1,31 +1,32 @@
 import wishlist from "../controllers/wishlistController";
 import { Router } from "express";
 import paginationMiddleware from "../middlewares/paginationMiddleware";
+import firebaseAuth from "../middlewares/firebaseAuth";
 
 const router = Router();
 
 // Add product to wishlist
-router.route("/add").post(wishlist.addToWishlist);
+router.route("/add").post(firebaseAuth.verifySessionCookie, wishlist.addToWishlist);
 
 // Get user's wishlist (with optional filters)
-router.route("/user/:userId").get(paginationMiddleware(10, 50),wishlist.getUserWishlist);
+router.route("/user").get(firebaseAuth.verifySessionCookie, paginationMiddleware(10, 50), wishlist.getUserWishlist);
 
 // Remove product from wishlist
-router.route("/user/:userId/product/:productId").delete(wishlist.removeFromWishlist);
+router.route("/product/:productId").delete(firebaseAuth.verifySessionCookie, wishlist.removeFromWishlist);
 
 // Update wishlist item (toggle favorite, update source)
-router.route("/user/:userId/product/:productId").put(wishlist.updateWishlistItem);
+router.route("/product/:productId").put(firebaseAuth.verifySessionCookie, wishlist.updateWishlistItem);
 
 // Check if product is in user's wishlist
-router.route("/user/:userId/product/:productId/status").get(wishlist.checkWishlistStatus);
+router.route("/product/:productId/status").get(firebaseAuth.verifySessionCookie, wishlist.checkWishlistStatus);
 
 // Clear entire wishlist for a user (with optional source filter)
-router.route("/user/:userId/clear").delete(wishlist.clearWishlist);
+router.route("/clear").delete(firebaseAuth.verifySessionCookie, wishlist.clearWishlist);
 
 // Get wishlist count for a user (with optional filters)
-router.route("/user/:userId/count").get(wishlist.getWishlistCount);
+router.route("/count").get(firebaseAuth.verifySessionCookie, wishlist.getWishlistCount);
 
 // Get analytics data (admin endpoint)
 router.route("/analytics").get(wishlist.getWishlistAnalytics);
 
-export default router; 
+export default router;
