@@ -70,3 +70,54 @@ Valsco Backend LensKart
 | GET    | `/`              | Get user by ID                   | -                     | ❌            |getUserProfile | User
 | PATCH  | `/`              | Update user                      | `multipart/form-data` | ✅ `"image"`  |updateUser     | User
 | DELETE | `/`              | Delete user                      | -                     | ❌            |deleteUser     | User
+
+
+# Product Routes API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/product`
+
+| Method | Endpoint               | Description                 | Request Type      | Image Upload | API Name            | ADMIN/USER |
+|--------|------------------------|-----------------------------|-------------------|--------------|---------------------|------------|
+| GET    | `/getTrendingProducts` | Get top trending products   | Query: `?limit=5` | ❌           | getTrendingProducts | User       |
+| GET    | `/getRandomProducts`   | Get random products         | Query: `?limit=5` | ❌           | getRandomProducts   | User       |
+
+
+# Notifcation and Subscription Routes API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/notification`
+
+| Method | Endpoint                     | Description                              | Request Type      | Image Upload | API Name                 | ADMIN/USER |
+|--------|------------------------------|------------------------------------------|-------------------|--------------|--------------------------|------------|
+| POST   | `/create`                    | Create a new notification                | JSON              | ❌           | createNotification       | Admin      |
+| POST   | `/sendAll`                   | Send notification to all users           | JSON              | ❌           | sendNotificationToAll    | Admin      |
+| GET    | `/all`                       | Get all notifications                    | -                 | ❌           | getAllNotifications      | Admin/User |
+| GET    | `/:id`                       | Get a specific notification by ID        | -                 | ❌           | getNotificationById      | Admin/User |
+| PUT    | `/:id`                       | Update a specific notification by ID     | JSON              | ❌           | updateNotification       | Admin      |
+| DELETE | `/:id`                       | Delete a specific notification by ID     | -                 | ❌           | deleteNotification       | Admin      |
+| POST   | `/saveSubscription`          | Save a user's push subscription          | JSON              | ❌           | saveSubscription         | User       |
+| GET    | `/getSubscription/:userId`   | Get a user's saved push subscriptions    | -                 | ❌           | getUserSubscriptions     | Admin/User |
+
+# Search Route API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/search`
+
+| Method | Endpoint        | Description                          | Request Type     | Image Upload | API Name        | ADMIN/USER |
+|--------|------------------|--------------------------------------|------------------|--------------|-----------------|------------|
+| GET    | `/products`      | Search products by name, brand, etc. | Query: `?query=rayban` | ❌       | searchProducts  | User/Admin |
+
+
+# Order Routes API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/order`
+
+| Method | Endpoint                    | Description                              | Request Type          | Image Upload | API Name              | ADMIN/USER |
+|--------|-----------------------------|------------------------------------------|----------------------|--------------|-----------------------|------------|
+| POST   | `/`                         | Create new order                         | JSON                 | ❌           | createOrder           | User       |
+| GET    | `/`                         | Get all orders for user                  | -                    | ❌           | getOrdersByUser       | User       |
+| GET    | `/:id`                      | Get order by ID                          | -                    | ❌           | getOrderById          | User       |
+| PATCH  | `/:id/cancel`               | Cancel order by ID                       | -                    | ❌           | cancelOrder           | User       |
+| GET    | `/track/:orderNumber`       | Track order by order number              | -                    | ❌           | trackOrder            | User       |
+| GET    | `/admin/all`                | Get all orders (admin)                   | -                    | ❌           | getAllOrders          | Admin      |
+| PATCH  | `/:id/status`               | Update order status                      | JSON                 | ❌           | updateOrderStatus     | Admin      |
+| PATCH  | `/:id/payment`              | Update payment status for order          | JSON                 | ❌           | updatePaymentStatus   | Admin      |
+| PATCH  | `/:id/tracking`             | Add tracking info to order               | JSON                 | ❌           | addTrackingInfo       | Admin      |

@@ -1,176 +1,70 @@
-// import { Product } from "../models/productModel";
-// import express from "express";
+import { Product } from "../models/productModel";
+import { Request, Response } from "express";
+import express from "express";
+import { SortOrder} from "mongoose";
 
-// class ProductController {
-//   createProduct = async (req: express.Request, res: express.Response) => {
-//     const {
-//       type,
-//       name,
-//       brand,
-//       description,
-//       price,
-//       discount,
-//       finalPrice,
-//       images,
-//       variants,
-//       tags,
-//       ratings,
-//       gender,
-//       frameShape,
-//       material,
-//     } = req.body;
+class ProductController {
+    getTrendingProducts = async (req: Request, res: Response) => {
+    try {
+        const limit = parseInt(req.query.limit as string) || 10;
+        const sortBy = req.query.sortBy as string || "combined"; 
 
-//     // These fields are required
-//     if (
-//       !type ||
-//       !name ||
-//       !brand ||
-//       price === undefined ||
-//       finalPrice === undefined ||
-//       !images ||
-//       !Array.isArray(images) ||
-//       images.length === 0
-//     ) {
-//       res.status(400).json({
-//         message:
-//           "Missing required fields: type, name, brand, price, finalPrice, images",
-//       });
-//       return;
-//     }
+        let sortOption: Record<string, number>;
 
-//     try {
-//       const product = new Product({
-//         type,
-//         name,
-//         brand,
-//         description,
-//         price,
-//         discount,
-//         finalPrice,
-//         images,
-//         variants,
-//         tags,
-//         ratings,
-//         gender,
-//         frameShape,
-//         material,
-//       });
+        switch (sortBy) {
+        case "reviews":
+            sortOption = { "ratings.count": -1 };
+            break;
+        case "ratings":
+            sortOption = { "ratings.average": -1 };
+            break;
+        case "combined":
+        default:
+            sortOption = {
+            "ratings.average": -1,
+            "ratings.count": -1,
+            };
+            break;
+        }
 
-//       const saved = await product.save();
-//       res.status(201).json(saved);
-//     } catch (error) {
-//       res.status(400).json({ message: "Error creating product", error });
-//     }
-//   };
+        const trending = await Product.find()
+        .sort({ "ratings.count": -1 } as Record<string, SortOrder>)
+        .limit(limit)
+        .populate("ratings.reviews")
+        .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
 
-//   getAllProducts = async (req: express.Request, res: express.Response) => {
-//     try {
-//       const products = await Product.find();
-//       res.status(200).json(products);
-//     } catch (error) {
-//       res.status(500).json({ message: "Error fetching products", error });
-//     }
-//   };
+        res.status(200).json({
+        success: true,
+        message: "Trending products fetched successfully",
+        products: trending,
+        });
+    } catch (error) {
+        console.error("Error fetching trending products:", error);
+        res.status(500).json({
+        success: false,
+        message: "Failed to fetch trending products",
+        error,
+        });
+    }
+    };
+    getRandomProducts = async (req: Request, res: Response) => {
+        try {
+            const limit = parseInt(req.query.limit as string) || 10;
 
-//   getProductById = async (req: express.Request, res: express.Response) => {
-//     //if id is not provided,returning 404 not found status
+            const count = await Product.countDocuments();
+            const random = Math.max(0, Math.floor(Math.random() * Math.max(1, count - limit)));
 
-//     const { id } = req.params;
-//     if (!id) {
-//       res.status(404).json({ message: "Missing product ID in parameters" });
-//       return;
-//     }
+            const products = await Product.find()
+            .skip(random)
+            .limit(limit)
+            .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
 
-//     try {
-//       const product = await Product.findById(req.params.id);
-//       if (!product) {
-//         res.status(404).json({ message: "Product not found" });
-//         return;
-//       }
+            res.status(200).json({ message: "Random products fetched", products });
+        } catch (error) {
+            res.status(500).json({ message: "Error fetching random products", error });
+        }
+    };
 
-//       res.status(200).json(product);
-//     } catch (error) {
-//       res.status(500).json({ message: "Error fetching product", error });
-//     }
-//   };
+}
 
-//   updateProduct = async (req: express.Request, res: express.Response) => {
-//     const { id } = req.params;
-//     if (!id) {
-//       res.status(400).json({ message: "Missing product ID in parameters" });
-//       return;
-//     }
-
-//     const {
-//       type,
-//       name,
-//       brand,
-//       description,
-//       price,
-//       discount,
-//       finalPrice,
-//       images,
-//       variants,
-//       tags,
-//       ratings,
-//       gender,
-//       frameShape,
-//       material,
-//     } = req.body;
-
-//     try {
-//       const updated = await Product.findByIdAndUpdate(
-//         id,
-//         {
-//           type,
-//           name,
-//           brand,
-//           description,
-//           price,
-//           discount,
-//           finalPrice,
-//           images,
-//           variants,
-//           tags,
-//           ratings,
-//           gender,
-//           frameShape,
-//           material,
-//         },
-//         { new: true }
-//       );
-
-//       if (!updated) {
-//         res.status(404).json({ message: "Product not found" });
-//         return;
-//       }
-
-//       res.status(200).json(updated);
-//     } catch (error) {
-//       res.status(400).json({ message: "Error updating product", error });
-//     }
-//   };
-
-//   deleteProduct = async (req: express.Request, res: express.Response) => {
-//     //if id is not provided,returning 404 not found status
-
-//     const { id } = req.params;
-//     if (!id) {
-//       res.status(404).json({ message: "Missing product ID in parameters" });
-//       return;
-//     }
-
-//     try {
-//       const deleted = await Product.findByIdAndDelete(req.params.id);
-//       if (!deleted) {
-//         res.status(404).json({ message: "Product not found" });
-//         return;
-//       }
-//       res.status(200).json({ message: "Product deleted successfully" });
-//     } catch (error) {
-//       res.status(500).json({ message: "Error deleting product", error });
-//     }
-//   };
-// }
-
-// export default new ProductController();
+export default new ProductController();
