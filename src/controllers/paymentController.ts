@@ -1,6 +1,53 @@
+import crypto from 'crypto';
+import { razorpay } from '../config/razorpay';
 import { Request, Response } from 'express';
 import { PaymentStatus ,Payment} from '../models/paymentModel';
 import mongoose from 'mongoose';
+
+/**
+ * POST /api/payment/create-order
+ * Body: { amount: number }  // rupees
+ */
+export const createOrder = async (req: Request, res: Response) => {
+  const { amount } = req.body;                 // ₹
+  const options = {
+    amount: Math.round(amount * 100),          // paise
+    currency: 'INR',
+    receipt: `rcpt_${Date.now()}`,
+  };
+
+  try {
+    const order = await razorpay.orders.create(options);
+    res.status(201).json(order);
+  } catch (err) {
+    console.error('Razorpay order error:', err);
+    res.status(500).json({ error: 'Order creation failed' });
+  }
+};
+
+/**
+ * POST /api/payment/verify
+ * Body: {
+ *   razorpay_order_id: string;
+ *   razorpay_payment_id: string;
+ *   razorpay_signature: string;
+ * }
+ */
+export const verifyPayment = (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  const hmac = crypto
+    .createHmac('sha256', process.env.RAZORPAY_SECRET!)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
+
+  if (hmac === razorpay_signature) {
+    // TODO: save payment details in DB here
+    return res.json({ verified: true, message: 'Payment verified' });
+  }
+
+  res.status(400).json({ verified: false, error: 'Invalid signature' });
+};
 
 class PaymentController {
   createPayment = async (req: Request, res: Response) => {
