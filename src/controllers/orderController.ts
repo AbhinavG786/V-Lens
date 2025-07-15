@@ -3,6 +3,7 @@ import { Cart } from "../models/cartModel";
 import { Product } from "../models/productModel";
 import express from "express";
 import { Lens } from "../models/lensModel";
+import { InventoryController } from './inventoryController';
 
 class OrderController {
   createOrder = async (req: express.Request, res: express.Response) => {
@@ -44,6 +45,12 @@ class OrderController {
           res.status(400).json({ message: `Product with ID ${item.productId} not found` });
           return;
         }
+        // Use InventoryController to check stock
+        const hasStock = await InventoryController.hasSufficientStock(product, item.quantity);
+        if (!hasStock) {
+          res.status(400).json({ message: `Product with ID ${item.productId} is out of stock or insufficient stock.` });
+          return;
+        }
         
         const populatedProduct = await product.populate<{ lensRef: { price: number } | null }>('lensRef', 'price');
         const itemTotal = product.finalPrice * item.quantity;
@@ -76,6 +83,13 @@ class OrderController {
       });
 
       const savedOrder = await order.save();
+      // Use InventoryController to decrement stock after order is saved
+      for (const item of items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          await InventoryController.decrementStock(product, item.quantity);
+        }
+      }
 
       // Clear user's cart after successful order
       await Cart.findOneAndUpdate(

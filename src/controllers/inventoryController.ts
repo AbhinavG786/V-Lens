@@ -1,97 +1,78 @@
-import { Request, Response } from "express";
-import { Inventory } from "../models/inventoryModel";
+import { Frame } from '../models/frameModel';
+import { Lens } from '../models/lensModel';
+import { Accessories } from '../models/accessoriesModel';
+import { Product } from '../models/productModel';
+import { Request, Response } from 'express';
 
-class InventoryController {
-  createInventoryItem = async (req: Request, res: Response) => {
-    try {
-      const { name, quantity, price } = req.body;
-      if (!name || quantity === undefined || price === undefined) {
-        res
-          .status(400)
-          .json({ error: "Missing required fields: name, quantity, price" });
-        return;
+export class InventoryController {
+  /**
+   * Checks if there is enough stock for the given product and quantity.
+   * Returns true if enough stock, false otherwise.
+   */
+  static async hasSufficientStock(product: any, quantity: number): Promise<boolean> {
+    if (!product) return false;
+    switch (product.type) {
+      case 'frames': {
+        if (!product.frameRef) return false;
+        const frame = await Frame.findById(product.frameRef);
+        return frame && typeof frame.stock === 'number' && frame.stock >= quantity;
       }
-      const item = new Inventory({ name, quantity, price });
-      await item.save();
-      res.status(201).json(item);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
+      case 'lenses': {
+        if (!product.lensRef) return false;
+        const lens = await Lens.findById(product.lensRef);
+        return lens && typeof lens.stock === 'number' && lens.stock >= quantity;
+      }
+      case 'accessories': {
+        if (!product.accessoriesRef) return false;
+        const accessories = await Accessories.findById(product.accessoriesRef);
+        return accessories && typeof accessories.stock === 'number' && accessories.stock >= quantity;
+      }
+      // Add more cases for other product types if needed
+      default:
+        return false;
     }
-  };
+  }
 
-  getAllInventoryItems = async (req: Request, res: Response) => {
-    try {
-      const items = await Inventory.find();
-      res.json(items);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+  /**
+   * Decrements the stock for the given product and quantity.
+   * Returns true if successful, false otherwise.
+   */
+  static async decrementStock(product: any, quantity: number): Promise<boolean> {
+    if (!product) return false;
+    switch (product.type) {
+      case 'frames': {
+        if (!product.frameRef) return false;
+        const frame = await Frame.findById(product.frameRef);
+        if (frame && typeof frame.stock === 'number' && frame.stock >= quantity) {
+          frame.stock -= quantity;
+          await frame.save();
+          return true;
+        }
+        return false;
+      }
+      case 'lenses': {
+        if (!product.lensRef) return false;
+        const lens = await Lens.findById(product.lensRef);
+        if (lens && typeof lens.stock === 'number' && lens.stock >= quantity) {
+          lens.stock -= quantity;
+          await lens.save();
+          return true;
+        }
+        return false;
+      }
+      case 'accessories': {
+        if (!product.accessoriesRef) return false;
+        const accessories = await Accessories.findById(product.accessoriesRef);
+        if (accessories && typeof accessories.stock === 'number' && accessories.stock >= quantity) {
+          accessories.stock -= quantity;
+          await accessories.save();
+          return true;
+        }
+        return false;
+      }
+      // Add more cases for other product types if needed
+      default:
+        return false;
     }
-  };
-
-  getInventoryItemById = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res.status(400).json({ error: "Item ID is required" });
-        return;
-      }
-      const item = await Inventory.findById(id);
-      if (!item) {
-        res.status(404).json({ error: "Item not found" });
-        return;
-      }
-      res.status(201).json(item);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  };
-
-  updateInventoryItemById = async (req: Request, res: Response) => {
-    try {
-      const { name, quantity, price } = req.body;
-      const { id } = req.params;
-      if (!id) {
-        res.status(400).json({ error: "Item ID is required" });
-        return;
-      }
-      if (!name || quantity === undefined || price === undefined) {
-        res
-          .status(400)
-          .json({ error: "Missing required fields: name, quantity, price" });
-        return;
-      }
-      const item = await Inventory.findByIdAndUpdate(
-        id,
-        { name, quantity, price },
-        { new: true }
-      );
-      if (!item) {
-        res.status(404).json({ error: "Item not found" });
-        return;
-      }
-      res.status(201).json(item);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
-    }
-  };
-
-  deleteInventoryItemById = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (!id) {
-        res.status(400).json({ error: "Item ID is required" });
-        return;
-      }
-      const item = await Inventory.findByIdAndDelete(id);
-      if (!item) {
-        res.status(404).json({ error: "Item not found" });
-        return;
-      }
-      res.status(204).json({ message: "Item deleted" });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  };
+  }
 }
-
-export default new InventoryController();
