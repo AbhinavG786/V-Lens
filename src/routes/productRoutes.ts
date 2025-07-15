@@ -1,9 +1,10 @@
 import product from "../controllers/productController"
 import { Router } from "express";
+import paginationMiddleware from "../middlewares/paginationMiddleware";
 
 const router= Router();
 
-// router.route("/all").get(product.getAllProducts)
+router.route("/all").get(paginationMiddleware(10,50),product.getAllProducts)
 // router.route("/create").post(product.createProduct);
 // router.route("/get/:id").get(product.getProductById);
 // router.route("/update/:id").put(product.updateProduct);
