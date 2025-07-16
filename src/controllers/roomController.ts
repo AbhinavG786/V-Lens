@@ -50,6 +50,7 @@ class RoomController {
 
       let room = await Room.findOne({
         participants: { $size: 2, $all: [userId, agentId] },
+        isChatEnded: false,
       });
 
       if (!room) {
