@@ -19,7 +19,7 @@ const inventorySchema = new Schema(
     },
     threshold: {
       type: Number,
-      required: true,
+      // required: true,
       default: 5,
     },
     locations: [
