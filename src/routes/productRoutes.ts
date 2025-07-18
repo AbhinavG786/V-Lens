@@ -9,8 +9,8 @@ router.route("/all").get(paginationMiddleware(10,50),product.getAllProducts)
 // router.route("/get/:id").get(product.getProductById);
 // router.route("/update/:id").put(product.updateProduct);
 // router.route("/delete/:id").delete(product.deleteProduct);
-router.route("/random").get(product.getRandomProducts);
-router.route("/trending").get(product.getTrendingProducts);
+router.route("/random").get(paginationMiddleware(10,50),product.getRandomProducts);
+router.route("/trending").get(paginationMiddleware(10,50),product.getTrendingProducts);
 
 
 export default router;

@@ -91,27 +91,26 @@ class FrameController {
 
     getAllFrames = async (req: Request, res: Response) => {
         try {
-            const skip = parseInt(req.query.skip as string) || 0;
-            const take = parseInt(req.query.take as string) || 10;
-
+            const { skip, take } = req.pagination!;
             const frames = await Frame.find()
             .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(take);
+            .skip(Number(skip))
+            .limit(Number(take));
 
             const total = await Frame.countDocuments();
 
             res.status(200).json({
             data: frames,
             total,
-            skip,
-            take,
-            totalPages: Math.ceil(total / take),
+            skip: Number(skip),
+            take: Number(take),
+            totalPages: Math.ceil(total / Number(take)),
             });
         } catch (error) {
             res.status(500).json({ message: "Error fetching frames", error });
         }
     };
+
 
 
     getFrameById = async (req: Request, res: Response) => {

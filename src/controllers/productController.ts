@@ -6,11 +6,10 @@ import { SortOrder } from "mongoose";
 class ProductController {
   getTrendingProducts = async (req: Request, res: Response) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const { skip, take } = req.pagination!;
       const sortBy = (req.query.sortBy as string) || "combined";
 
-      let sortOption: Record<string, number>;
-
+      let sortOption: Record<string, SortOrder>;
       switch (sortBy) {
         case "reviews":
           sortOption = { "ratings.count": -1 };
@@ -27,18 +26,23 @@ class ProductController {
           break;
       }
 
-      const trending = await Product.find()
-        .sort({ "ratings.count": -1 } as Record<string, SortOrder>)
-        .limit(limit)
+      const products = await Product.find()
+        .sort(sortOption)
+        .skip(skip)
+        .limit(take)
         .populate("ratings.reviews")
-        .populate(
-          "lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef"
-        );
+        .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
+
+      const total = await Product.countDocuments();
 
       res.status(200).json({
         success: true,
         message: "Trending products fetched successfully",
-        products: trending,
+        products,
+        total,
+        skip,
+        take,
+        totalPages: Math.ceil(total / take),
       });
     } catch (error) {
       console.error("Error fetching trending products:", error);
@@ -49,28 +53,35 @@ class ProductController {
       });
     }
   };
+
   getRandomProducts = async (req: Request, res: Response) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
+      const { skip, take } = req.pagination!;
+      const total = await Product.countDocuments();
 
-      const count = await Product.countDocuments();
-      const random = Math.max(
-        0,
-        Math.floor(Math.random() * Math.max(1, count - limit))
-      );
+      const safeSkip = Math.min(Math.max(0, skip), Math.max(0, total - take));
 
       const products = await Product.find()
-        .skip(random)
-        .limit(limit)
-        .populate(
-          "lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef"
-        );
+        .skip(safeSkip)
+        .limit(take)
+        .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
 
-      res.status(200).json({ message: "Random products fetched", products });
+      res.status(200).json({
+        success: true,
+        message: "Random products fetched",
+        products,
+        total,
+        skip: safeSkip,
+        take,
+        totalPages: Math.ceil(total / take),
+      });
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Error fetching random products", error });
+      console.error("Error fetching random products:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error fetching random products",
+        error,
+      });
     }
   };
 
