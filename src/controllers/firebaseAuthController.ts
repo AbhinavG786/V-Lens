@@ -18,10 +18,10 @@ class FirebaseAuthController {
 
       const decoded = await admin.auth().verifyIdToken(idToken, true);
 
-      if (!decoded.email_verified) {
-        res.status(401).json({ error: "Please verify your email first." });
-        return;
-      }
+      // if (!decoded.email_verified) {
+      //   res.status(401).json({ error: "Please verify your email first." });
+      //   return;
+      // }
 
       const sessionCookie = await admin
         .auth()
