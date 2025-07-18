@@ -104,14 +104,29 @@ Valsco Backend LensKart
 
 ### Base URL: `http://localhost:5000/order`
 
-| Method | Endpoint              | Description                     | Request Type | Image Upload | API Name            | ADMIN/USER |
-| ------ | --------------------- | ------------------------------- | ------------ | ------------ | ------------------- | ---------- |
-| POST   | `/`                   | Create new order                | JSON         | ❌           | createOrder         | User       |
-| GET    | `/`                   | Get all orders for user         | -            | ❌           | getOrdersByUser     | User       |
-| GET    | `/:id`                | Get order by ID                 | -            | ❌           | getOrderById        | User       |
-| PATCH  | `/:id/cancel`         | Cancel order by ID              | -            | ❌           | cancelOrder         | User       |
-| GET    | `/track/:orderNumber` | Track order by order number     | -            | ❌           | trackOrder          | User       |
-| GET    | `/admin/all`          | Get all orders (admin)          | -            | ❌           | getAllOrders        | Admin      |
-| PATCH  | `/:id/status`         | Update order status             | JSON         | ❌           | updateOrderStatus   | Admin      |
-| PATCH  | `/:id/payment`        | Update payment status for order | JSON         | ❌           | updatePaymentStatus | Admin      |
-| PATCH  | `/:id/tracking`       | Add tracking info to order      | JSON         | ❌           | addTrackingInfo     | Admin      |
+| Method | Endpoint                    | Description                              | Request Type          | Image Upload | API Name              | ADMIN/USER |
+|--------|-----------------------------|------------------------------------------|----------------------|--------------|-----------------------|------------|
+| POST   | `/`                         | Create new order                         | JSON                 | ❌           | createOrder           | User       |
+| GET    | `/`                         | Get all orders for user                  | -                    | ❌           | getOrdersByUser       | User       |
+| GET    | `/:id`                      | Get order by ID                          | -                    | ❌           | getOrderById          | User       |
+| PATCH  | `/:id/cancel`               | Cancel order by ID                       | -                    | ❌           | cancelOrder           | User       |
+| GET    | `/track/:orderNumber`       | Track order by order number              | -                    | ❌           | trackOrder            | User       |
+| GET    | `/admin/all`                | Get all orders (admin)                   | -                    | ❌           | getAllOrders          | Admin      |
+| PATCH  | `/:id/status`               | Update order status                      | JSON                 | ❌           | updateOrderStatus     | Admin      |
+| PATCH  | `/:id/payment`              | Update payment status for order          | JSON                 | ❌           | updatePaymentStatus   | Admin      |
+| PATCH  | `/:id/tracking`             | Add tracking info to order               | JSON                 | ❌           | addTrackingInfo       | Admin      |
+
+
+# Cart Routes API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/api/cart`
+
+All cart routes require a user to be authenticated via a session cookie.
+
+| Method | Endpoint | Description                      | Request Type | API Name             |
+| :----- | :------- | :------------------------------- | :----------- | :------------------- |
+| `POST` | `/add`   | Add an item to the user's cart   | JSON         | `addToCart`          |
+| `GET`  | `/`      | Get the logged-in user's cart    | -            | `getCart`            |
+| `PUT`| `/update`| Update an item's quantity        | JSON         | `updateItemQuantity` |
+| `DELETE`| `/item`  | Remove a specific item from cart | JSON         | `removeFromCart`     |
+| `DELETE`| `/`      | Clear the entire user's cart     | -            | `clearCart`          |

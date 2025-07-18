@@ -80,14 +80,38 @@ class FrameController {
         }
     };
 
-    getAllFrames = async (_req: Request, res: Response) => {
+    // getAllFrames = async (_req: Request, res: Response) => {
+    //     try {
+    //     const frames = await Frame.find().sort({ createdAt: -1 });
+    //     res.status(200).json(frames);
+    //     } catch (error) {
+    //     res.status(500).json({ message: "Error fetching frames", error });
+    //     }
+    // };
+
+    getAllFrames = async (req: Request, res: Response) => {
         try {
-        const frames = await Frame.find().sort({ createdAt: -1 });
-        res.status(200).json(frames);
+            const { skip, take } = req.pagination!;
+            const frames = await Frame.find()
+            .sort({ createdAt: -1 })
+            .skip(Number(skip))
+            .limit(Number(take));
+
+            const total = await Frame.countDocuments();
+
+            res.status(200).json({
+            data: frames,
+            total,
+            skip: Number(skip),
+            take: Number(take),
+            totalPages: Math.ceil(total / Number(take)),
+            });
         } catch (error) {
-        res.status(500).json({ message: "Error fetching frames", error });
+            res.status(500).json({ message: "Error fetching frames", error });
         }
     };
+
+
 
     getFrameById = async (req: Request, res: Response) => {
         const { id } = req.params;
