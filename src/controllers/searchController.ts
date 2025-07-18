@@ -3,26 +3,43 @@ import { Product } from "../models/productModel";
 
 class SearchController {
   searchProducts = async (req: Request, res: Response) => {
-    const { query } = req.query;
+    try {
+      const { skip, take } = req.pagination!;
+      const query = req.query.query as string;
 
-    if (!query || typeof query !== "string") {
+      if (!query || typeof query !== "string") {
         res.status(400).json({ message: "Search query is required" });
         return;
-    }
+      }
 
-    try {
-      const results = await Product.find({
+      const regex = new RegExp(query, "i");
+
+      const filter = {
         $or: [
-          { name: { $regex: query, $options: "i" } },
-          { brand: { $regex: query, $options: "i" } },
-          { type: { $regex: query, $options: "i" } },
-          { tags: { $in: [new RegExp(query, "i")] } },
+          { name: { $regex: regex } },
+          { type: { $regex: regex } },
+          { tags: { $in: [regex] } },
         ],
-      });
+      };
 
-      res.status(200).json(results);
+      const [products, total] = await Promise.all([
+        Product.find(filter)
+          .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef")
+          .skip(Number(skip))
+          .limit(Number(take)),
+        Product.countDocuments(filter),
+      ]);
+
+      res.status(200).json({
+        data: products,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
     } catch (error) {
       res.status(500).json({ message: "Error searching products", error });
+      return;
     }
   };
 }
