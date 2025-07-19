@@ -19,26 +19,34 @@ const inventorySchema = new Schema(
     },
     threshold: {
       type: Number,
-      // required: true,
       default: 5,
     },
-    locations: [
-      {
-        warehouse: {
-          type: String,
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          default: 0,
-        },
-      },
-    ],
+    warehouseId: {
+      type: Schema.Types.ObjectId,
+      ref: "Warehouse",
+      required: true,
+    },
+
+    // locations: [
+    //   {
+    //     warehouse: {
+    //       type: String,
+    //       required: true,
+    //     },
+    //     quantity: {
+    //       type: Number,
+    //       default: 0,
+    //     },
+    //   },
+    // ],
   },
   {
     timestamps: true,
   }
 );
+
+inventorySchema.index({ productId: 1, warehouseId: 1 }, { unique: true });
+
 
 type InventoryType = InferSchemaType<typeof inventorySchema>;
 export const Inventory = mongoose.model<InventoryType>("Inventory", inventorySchema);

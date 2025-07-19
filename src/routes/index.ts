@@ -20,6 +20,7 @@ import frameRoutes from "./frameRoutes";
 import accessoriesRoutes from "./accessoriesRoutes";
 import sunglassRoutes from "./sunglassRoutes";
 import appointmentRoutes from "./appointmentRoutes";
+import warehouseRoutes from "./warehouseRoutes";
 
 
 const router = Router();
@@ -46,5 +47,6 @@ router.use("/frame", frameRoutes);
 router.use("/accessories", accessoriesRoutes);
 router.use("/sunglasses", sunglassRoutes);
 router.use("/appointments", appointmentRoutes);
+router.use("/warehouse", warehouseRoutes);
 
 export default router;

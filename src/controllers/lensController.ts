@@ -1,6 +1,9 @@
 import { Lens } from "../models/lensModel";
 import { Product } from "../models/productModel";
+import { Inventory } from "../models/inventoryModel";
+import { Warehouse } from "../models/warehouseModel";
 import express from "express";
+import mongoose from "mongoose";
 import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 
@@ -18,6 +21,8 @@ class LensController {
       discount,
       tags,
       gender,
+      threshold,
+      stockByWarehouse, // stockByWarehouse should be sent as a json object containing warehousename and quantity
       folder = "lens",
     } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
@@ -28,7 +33,8 @@ class LensController {
       !stock ||
       !description ||
       !color ||
-      !power
+      !power ||
+      !stockByWarehouse
     ) {
       res.status(400).json({ message: "All fields are required" });
       return;
@@ -73,10 +79,49 @@ class LensController {
         lensRef: savedLens._id,
       });
       const savedProduct = await newProduct.save();
+
+      let parsedStockByWarehouse: Record<string, number> = {};
+try {
+  parsedStockByWarehouse = JSON.parse(stockByWarehouse);
+} catch (err) {
+   res.status(400).json({ message: "Invalid stockByWarehouse format" });
+   return
+}
+
+      const warehouseNames = Object.keys(parsedStockByWarehouse);
+
+      const warehouses = await Warehouse.find({
+        warehouseName: { $in: warehouseNames },
+      });
+
+      const warehouseMap = new Map<string, mongoose.Types.ObjectId>();
+      warehouses.forEach((w) => warehouseMap.set(w.warehouseName, w._id));
+
+      for (const name of warehouseNames) {
+        if (!warehouseMap.has(name)) {
+          res.status(404).json({ message: `Warehouse not found: ${name}` });
+          return;
+        }
+      }
+
+      const inventoryItems = warehouseNames.map((warehouseName) => ({
+        productId: savedProduct._id,
+        SKU: `LEN-${Date.now().toString(36).toUpperCase()}-${Math.random()
+          .toString(36)
+          .substr(2, 5)
+          .toUpperCase()}`,
+        stock: Number(parsedStockByWarehouse[warehouseName]),
+        threshold,
+        warehouseId: warehouseMap.get(warehouseName),
+      }));
+
+      const savedInventoryItems = await Inventory.insertMany(inventoryItems);
+
       res.status(201).json({
-        message: "Lens and Product created successfully",
+        message: "Lens, Product and Inventory items created successfully",
         lens: savedLens,
         product: savedProduct,
+        inventoryItems: savedInventoryItems,
       });
     } catch (error) {
       console.error("Error creating lens:", error);
@@ -248,7 +293,8 @@ class LensController {
       const updatedProductData: any = {};
       if (productName) updatedProductData.name = productName;
       if (gender) {
-        const allowedGenders = (Product.schema.path("gender") as any).enumValues;
+        const allowedGenders = (Product.schema.path("gender") as any)
+          .enumValues;
         if (allowedGenders.includes(gender)) {
           updatedProductData.gender = gender;
         }
