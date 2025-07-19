@@ -13,7 +13,7 @@ class LensController {
       brand,
       type,
       price,
-      stock,
+      // stock,
       description,
       color,
       power,
@@ -22,15 +22,19 @@ class LensController {
       tags,
       gender,
       threshold,
-      stockByWarehouse, // stockByWarehouse should be sent as a json object containing warehousename and quantity
+      stockByWarehouse,
       folder = "lens",
     } = req.body;
+    /* stockByWarehouse should be sent as a json object containing warehousename and quantity 
+      "stockByWarehouse": {
+        "Warehouse A": 20,
+        "Warehouse B": 10
+      } */
     const folderType = req.body.folder || req.query.folder || "others";
     if (
       !brand ||
       !type ||
       !price ||
-      !stock ||
       !description ||
       !color ||
       !power ||
@@ -55,11 +59,16 @@ class LensController {
         res.status(500).json({ message: "Failed to upload image" });
         return;
       }
+
+      const totalStock = Object.values(stockByWarehouse).reduce(
+        (sum: number, qty) => sum + Number(qty),
+        0
+      );
       const newLens = new Lens({
         brand,
         type,
         price,
-        stock,
+        stock: totalStock,
         description,
         imageUrl: uploaded.secure_url,
         imagePublicId: uploaded.public_id,
@@ -81,12 +90,12 @@ class LensController {
       const savedProduct = await newProduct.save();
 
       let parsedStockByWarehouse: Record<string, number> = {};
-try {
-  parsedStockByWarehouse = JSON.parse(stockByWarehouse);
-} catch (err) {
-   res.status(400).json({ message: "Invalid stockByWarehouse format" });
-   return
-}
+      try {
+        parsedStockByWarehouse = JSON.parse(stockByWarehouse);
+      } catch (err) {
+        res.status(400).json({ message: "Invalid stockByWarehouse format" });
+        return;
+      }
 
       const warehouseNames = Object.keys(parsedStockByWarehouse);
 

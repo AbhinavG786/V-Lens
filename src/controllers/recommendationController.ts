@@ -5,9 +5,6 @@ import { Wishlist } from "../models/wishlistModel";
 import { Order } from "../models/orderModel";
 import { Review } from "../models/reviewModel";
 
-
-export { razorpay };
-
 // GET /recommendations/:userId
 export class RecommendationController {
    getRecommendationsForUser = async (req: express.Request, res: express.Response) => {

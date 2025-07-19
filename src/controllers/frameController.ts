@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
 import { Frame } from "../models/frameModel";
 import { Product } from "../models/productModel";
+import { Warehouse } from "../models/warehouseModel";
+import { Inventory } from "../models/inventoryModel";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import cloudinary from "../utils/cloudinary";
+import mongoose from "mongoose";
 
 class FrameController {
     createFrame = async (req: Request, res: Response) => {
@@ -12,19 +15,21 @@ class FrameController {
         material,
         color,
         size,
-        stock,
+        // stock,
         price,
         description,
         name,
         discount,
         tags,
         gender,
+        threshold,
+        stockByWarehouse,
         folder = "frame",
         } = req.body;
 
         const folderType = req.body.folder || req.query.folder || "others";
 
-        if (!brand || !shape || !material || !color || !size || !stock ||!price || !description) {
+        if (!brand || !shape || !material || !color || !size || !stockByWarehouse ||!price || !description) {
             res.status(400).json({ message: "Missing required fields" });
             return;
         }
@@ -46,13 +51,18 @@ class FrameController {
                 return;
         }
 
+         const totalStock = Object.values(stockByWarehouse).reduce(
+        (sum: number, qty) => sum + Number(qty),
+        0
+      );
+
         const frame = await Frame.create({
             brand,
             shape,
             material,
             color,
             size,
-            stock,
+            stock: totalStock,
             price,
             description,
             imageUrl: uploaded.secure_url,
@@ -69,10 +79,49 @@ class FrameController {
             frameRef: frame._id,
         });
 
+        let parsedStockByWarehouse: Record<string, number> = {};
+              try {
+                parsedStockByWarehouse = JSON.parse(stockByWarehouse);
+              } catch (err) {
+                res.status(400).json({ message: "Invalid stockByWarehouse format" });
+                return;
+              }
+        
+              const warehouseNames = Object.keys(parsedStockByWarehouse);
+        
+              const warehouses = await Warehouse.find({
+                warehouseName: { $in: warehouseNames },
+              });
+        
+              const warehouseMap = new Map<string, mongoose.Types.ObjectId>();
+              warehouses.forEach((w) => warehouseMap.set(w.warehouseName, w._id));
+        
+              for (const name of warehouseNames) {
+                if (!warehouseMap.has(name)) {
+                  res.status(404).json({ message: `Warehouse not found: ${name}` });
+                  return;
+                }
+              }
+        
+              const inventoryItems = warehouseNames.map((warehouseName) => ({
+                productId: product._id,
+                SKU: `FRA-${Date.now().toString(36).toUpperCase()}-${Math.random()
+                  .toString(36)
+                  .substr(2, 5)
+                  .toUpperCase()}`,
+                stock: Number(parsedStockByWarehouse[warehouseName]),
+                threshold,
+                warehouseId: warehouseMap.get(warehouseName),
+              }));
+        
+              const savedInventoryItems = await Inventory.insertMany(inventoryItems);
+        
+
         res.status(201).json({
-            message: "Frame and Product created successfully",
-            frame,
-            product,
+            message: "Frame, Product and Inventory items created successfully",
+            frame: frame,
+            product: product,
+            inventoryItems: savedInventoryItems
         });
         } catch (error) {
         console.error("Error creating frame:", error);
