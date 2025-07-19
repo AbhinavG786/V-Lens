@@ -77,6 +77,22 @@ Valsco Backend LensKart
 | GET    | `/get/:productId` | Get product by id                 | -                 | ❌           | getProductById               | User       |
 | GET    | `/productType`    | Get products by type              | Query: `?limit=5` | ❌           | getAllProductsByType         | User       |
 
+# Wishlist Routes API – Valsco LensKart
+
+### Base URL: `http://localhost:5000/wishlist`
+
+| Method | Endpoint                        | Description                                 | Request Type         | API Name                | ADMIN/USER |
+|--------|----------------------------------|---------------------------------------------|----------------------|-------------------------|------------|
+| POST   | `/add`                          | Add product to wishlist                     | JSON                 | addToWishlist           | User       |
+| GET    | `/user`                         | Get user's wishlist (with filters, paging)  | Query params         | getUserWishlist         | User       |
+| DELETE | `/product/:productId`           | Remove product from wishlist                | -                    | removeFromWishlist      | User       |
+| PUT    | `/product/:productId`           | Update wishlist item (favorite/source)      | JSON                 | updateWishlistItem      | User       |
+| GET    | `/product/:productId/status`    | Check if product is in user's wishlist      | -                    | checkWishlistStatus     | User       |
+| DELETE | `/clear`                        | Clear entire wishlist for a user            | Query params         | clearWishlist           | User       |
+| GET    | `/count`                        | Get wishlist count for a user               | Query params         | getWishlistCount        | User       |
+| GET    | `/analytics`                    | Get wishlist analytics (admin)              | Query params         | getWishlistAnalytics    | Admin      |
+
+
 # Notifcation and Subscription Routes API – Valsco LensKart
 
 ### Base URL: `http://localhost:5000/notification`
