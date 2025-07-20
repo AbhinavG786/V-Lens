@@ -1,4 +1,4 @@
-import eyeglass from "../controllers/eyeController";
+import eyeglass from "../controllers/eyeglassController";
 import { Router } from "express";
 import paginationMiddleware from "../middlewares/paginationMiddleware";
 import adminAuth from "../middlewares/adminAuth";

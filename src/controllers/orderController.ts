@@ -45,15 +45,37 @@ class OrderController {
           return;
         }
         
-        const populatedProduct = await product.populate<{ lensRef: { price: number } | null }>('lensRef', 'price');
-        const itemTotal = product.finalPrice * item.quantity;
-        const lensPrice = populatedProduct.lensRef && typeof populatedProduct.lensRef === 'object' && 'price' in populatedProduct.lensRef
-          ? populatedProduct.lensRef.price
-          : product.finalPrice;
-        const itemDiscount = (lensPrice - product.finalPrice) * item.quantity;
-        
+        // const populatedProduct = await product.populate<{ lensRef: { price: number } | null }>('lensRef', 'price');
+        // const itemTotal = product.finalPrice * item.quantity;
+        // const lensPrice = populatedProduct.lensRef && typeof populatedProduct.lensRef === 'object' && 'price' in populatedProduct.lensRef
+        //   ? populatedProduct.lensRef.price
+        //   : product.finalPrice;
+        // const itemDiscount = (lensPrice - product.finalPrice) * item.quantity;
+
+        const typeToRefMap: Record<string, string> = {
+          lenses: "lensRef",
+          frames: "frameRef",
+          accessories: "accessoriesRef",
+          sunglasses: "sunglassesRef",
+          eyeglasses: "eyeglassesRef",
+        };
+
+        const refField = typeToRefMap[product.type];
+        if (refField) {
+          const populatedProduct = await product.populate<{
+            [key: string]: { discount:number,finalPrice:number } | null;
+          }>({
+            path: refField,
+            select: "discount finalPrice",
+          });
+          const subDoc = (populatedProduct as any)[refField];
+        if(subDoc){
+          const itemTotal = subDoc.finalPrice * item.quantity;
+          const itemDiscount = subDoc.discount * item.quantity;
         totalAmount += itemTotal;
         discountAmount += itemDiscount;
+        }
+        }
       }
 
       const finalAmount = totalAmount;

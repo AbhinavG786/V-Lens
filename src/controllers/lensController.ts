@@ -70,21 +70,21 @@ class LensController {
         price,
         stock: totalStock,
         description,
+        discount,
+        finalPrice:
+          discount > 0 ? Math.round(price - (price * discount) / 100) : price,
         imageUrl: uploaded.secure_url,
         imagePublicId: uploaded.public_id,
         color,
         power,
+        gender,
       });
       const savedLens = await newLens.save();
 
       const newProduct = new Product({
         type: "lenses",
         name,
-        discount,
-        finalPrice:
-          discount > 0 ? Math.round(price - (price * discount) / 100) : price,
         tags,
-        gender,
         lensRef: savedLens._id,
       });
       const savedProduct = await newProduct.save();
@@ -170,15 +170,19 @@ class LensController {
   getLensByBrand = async (req: express.Request, res: express.Response) => {
     const { brand } = req.query;
     const { skip, take } = req.pagination!;
+    if (!brand) {
+      res.status(400).json({ message: "Brand is required" });
+      return;
+    }
     try {
       const lenses = await Lens.find({ brand: brand })
         .skip(Number(skip))
         .limit(Number(take));
-      const total = await Lens.countDocuments();
       if (lenses.length === 0) {
         res.status(404).json({ message: "No lenses found for this brand" });
         return;
       }
+      const total = await Lens.countDocuments();
       res.status(200).json({
         data: lenses,
         total,
@@ -229,13 +233,106 @@ class LensController {
     }
   };
 
+  getLensByGender = async (req: express.Request, res: express.Response) => {
+    const { gender } = req.query;
+    const { skip, take } = req.pagination!;
+    if (!gender) {
+      res.status(400).json({ message: "Gender is required" });
+      return;
+    }
+    try {
+      const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
+      if (allowedGenders.includes(gender)) {
+        const lenses = await Lens.find({ gender: gender })
+          .skip(Number(skip))
+          .limit(Number(take));
+        const total = await Lens.countDocuments();
+        if (lenses.length === 0) {
+          res.status(404).json({ message: "No lenses found for this gender" });
+          return;
+        }
+        res.status(200).json({
+          data: lenses,
+          total,
+          skip: Number(skip),
+          take: Number(take),
+          totalPages: Math.ceil(total / Number(take)),
+        });
+      } else {
+        res.status(400).json({ message: `Invalid gender value.` });
+        return;
+      }
+    } catch (error) {
+      console.error("Error fetching lenses by gender:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  getLensByColor = async (req: express.Request, res: express.Response) => {
+    const { color } = req.query;
+    const { skip, take } = req.pagination!;
+    if (!color) {
+      res.status(400).json({ message: "Color is required" });
+      return;
+    }
+    try {
+      const lenses = await Lens.find({ color: color })
+        .skip(Number(skip))
+        .limit(Number(take));
+      const total = await Lens.countDocuments();
+      if (lenses.length === 0) {
+        res.status(404).json({ message: "No lenses found for this color" });
+        return;
+      }
+      res.status(200).json({
+        data: lenses,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching lenses by color:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  getLensByPower = async (req: express.Request, res: express.Response) => {
+    const { power } = req.query;
+    const { skip, take } = req.pagination!;
+    if (!power) {
+      res.status(400).json({ message: "Power is required" });
+      return;
+    }
+    try {
+      const lenses = await Lens.find({ power: power })
+        .skip(Number(skip))
+        .limit(Number(take));
+      const total = await Lens.countDocuments();
+      if (lenses.length === 0) {
+        res.status(404).json({ message: "No lenses found for this power" });
+        return;
+      }
+      res.status(200).json({
+        data: lenses,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching lenses by power:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
   updateLensProduct = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
     const {
       brand,
       type,
       price,
-      stock,
+      // stock,
       description,
       color,
       power,
@@ -263,8 +360,24 @@ class LensController {
           return;
         }
       }
+      if (gender) {
+        const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          updatedData.gender = gender;
+        } else {
+          res.status(400).json({ message: `Invalid gender value.` });
+          return;
+        }
+      }
+      if (discount) {
+        updatedData.discount = discount;
+        updatedData.finalPrice =
+          discount > 0
+            ? Math.round(lens.price - (lens.price * discount) / 100)
+            : lens.price;
+      }
       if (price) updatedData.price = price;
-      if (stock) updatedData.stock = stock;
+      // if (stock) updatedData.stock = stock;
       if (description) updatedData.description = description;
       if (color) updatedData.color = color;
       if (power) updatedData.power = power;
@@ -301,22 +414,6 @@ class LensController {
       }
       const updatedProductData: any = {};
       if (productName) updatedProductData.name = productName;
-      if (gender) {
-        const allowedGenders = (Product.schema.path("gender") as any)
-          .enumValues;
-        if (allowedGenders.includes(gender)) {
-          updatedProductData.gender = gender;
-        }
-      }
-      if (discount) {
-        updatedProductData.discount = discount;
-        updatedProductData.finalPrice =
-          discount > 0
-            ? Math.round(
-                updatedLens.price - (updatedLens.price * discount) / 100
-              )
-            : updatedLens.price;
-      }
       if (tags) updatedProductData.tags = tags;
       const updatedProduct = await Product.findOneAndUpdate(
         { lensRef: lensId },
@@ -372,7 +469,7 @@ class LensController {
     }
     try {
       const lenses = await Lens.find({
-        price: {
+        finalPrice: {
           $gte: parseFloat(minPrice as string),
           $lte: parseFloat(maxPrice as string),
         },
@@ -394,7 +491,7 @@ class LensController {
         totalPages: Math.ceil(total / Number(take)),
       });
     } catch (error) {
-      console.error("Error fetching lenses by price range:", error);
+      console.error("Error fetching lenses by final price range:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };

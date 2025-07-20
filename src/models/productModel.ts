@@ -22,14 +22,14 @@ const productSchema = new Schema(
     //   type: Number,
     //   required: true,
     // },
-    discount: {
-      type: Number,
-      default: 0,
-    },
-    finalPrice: {
-      type: Number,
-      required: true,
-    },
+    // discount: {
+    //   type: Number,
+    //   default: 0,
+    // },
+    // finalPrice: {
+    //   type: Number,
+    //   required: true,
+    // },
     // images: [
     //   {
     //     type: String,
@@ -66,11 +66,11 @@ const productSchema = new Schema(
     // tryOn3DModel: {
     //   type: String, // URL to the 3D model file
     // },
-    gender: {
-      type: String,
-      enum: ["men", "women", "unisex"],
-      default: "unisex",
-    },
+    // gender: {
+    //   type: String,
+    //   enum: ["men", "women", "unisex"],
+    //   default: "unisex",
+    // },
     lensRef:{
       type: Schema.Types.ObjectId,
       ref: "Lens",

@@ -2,10 +2,6 @@ import mongoose, { Schema, InferSchemaType } from "mongoose";
 
 const frameSchema = new Schema(
   {
-    // name: {
-    //   type: String,
-    //   required: true,
-    // },
     brand: {
       type: String,
       required: true,
@@ -38,11 +34,19 @@ const frameSchema = new Schema(
       type: Number,
       required: true,
     },
-    // gender: {
-    //   type: String,
-    //   enum: ["men", "women", "unisex"],
-    //   default: "unisex",
-    // },
+     discount: {
+      type: Number,
+      default: 0,
+    },
+    finalPrice: {
+      type: Number,
+      required: true,
+    },
+    gender: {
+      type: String,
+      enum: ["men", "women", "unisex"],
+      default: "unisex",
+    },
     imageUrl: {
       type: String,
       required: true,
