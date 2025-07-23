@@ -15,6 +15,12 @@ declare global {
          fullName: string;
          isAdmin: boolean;
        };
+        agent?: {
+          uid: string;
+          email: string;
+          fullName: string;
+          isAgent: boolean;
+        };
     }
   }
 }

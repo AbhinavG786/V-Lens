@@ -15,7 +15,7 @@ export const SocketServiceInit = (server:any) => {
     //Agent dashboard should connect to the WebSocket server immediately after login — even if no room has been assigned yet.
     socket.on("agent-online", async (data) => {
       const {firebaseUID}=data
-  const user = await User.findOne({ firebaseUID, isAdmin: true });
+  const user = await User.findOne({ firebaseUID, isAgent: true });
   if (user) {
     onlineAgents.set(user._id.toString(), socket.id);
     console.log(`Agent ${user._id} is now online`);

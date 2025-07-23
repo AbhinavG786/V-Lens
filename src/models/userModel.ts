@@ -28,6 +28,18 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isAgent: {
+      type: Boolean,
+      default: false,
+    },
+    currentLoad: {
+      type: Number,
+      default: 0,
+    }, 
+    maxLoad: {
+      type: Number,
+      default: 3,
+    },
     loginMethod: {
       type: String,
       enum: ["email", "google"],
@@ -41,8 +53,8 @@ const userSchema = new Schema(
     imageUrl: {
       type: String,
     },
-    imagePublicId:{
-      type:String,
+    imagePublicId: {
+      type: String,
     },
     addresses: [
       {

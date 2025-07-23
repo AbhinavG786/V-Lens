@@ -7,7 +7,9 @@ import redisClient from "../utils/redis";
 
 class FirebaseAuthController {
   login = async (req: express.Request, res: express.Response) => {
-    const { fullName,idToken ,phone,isAdmin=false} = req.body;
+    // dont keep isAgent and isAdmin true together, only one should be true at a time, also give currentLoad and maxLoad values only during agent signup
+    // if isAdmin is true, then currentLoad and maxLoad should not be given,
+    const { fullName,idToken ,phone,isAdmin=false,isAgent=false,currentLoad=0,maxLoad=3} = req.body;
     if (!idToken) {
       res.status(400).json({ error: "ID token required" });
       return;
@@ -52,6 +54,9 @@ if (!globalPhoneRegex.test(phone)) {
           loginMethod: provider === "google.com" ? "google" : "email",
           phone: phone,
           isAdmin: isAdmin,
+          isAgent: isAgent,
+          currentLoad: currentLoad,
+          maxLoad: maxLoad,
           addresses: [],
           wishlist: [],
           prescriptions: [],

@@ -1,7 +1,7 @@
 import { Room } from "../models/roomModel";
 import { User } from "../models/userModel";
 import { Message } from "../models/messageModel";
-import {Feedback} from "../models/agentFeedbackModel"
+import { Feedback } from "../models/agentFeedbackModel";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import { onlineAgents } from "../utils/socket-server";
 import { io } from "../utils/socket-server";
@@ -24,29 +24,48 @@ class RoomController {
     const userId = currentUser._id;
 
     try {
-      const availableAgents = await User.find(
-        {
-          isAdmin: true,
-          isAvailable: true,
-          _id: { $in: Array.from(onlineAgents.keys()) },
-        },
-        { _id: 1 }
-      );
+      // const allOnlineAgents = await User.find(
+      //   {
+      //     isAgent: true,
+      //     isAvailable: true,
+      //     _id: { $in: Array.from(onlineAgents.keys()) },
+      //   },
+      //   { _id: 1 }
+      // );
 
-      if (availableAgents.length === 0) {
-        res.status(500).json({ error: "No available agents online" });
-        return;
-      }
+      // const availableAgents = allOnlineAgents.filter(
+      //   (agent) => agent.currentLoad < agent.maxLoad
+      // );
 
-      // const agents = await User.find({ isAdmin: true }, { _id: 1 });
-
-      // if (agents.length === 0) {
-      //   res.status(500).json({ error: "No available agents" });
+      // if (availableAgents.length === 0) {
+      //   res.status(500).json({ error: "No available agents online" });
       //   return;
       // }
 
-      const randomAgent = availableAgents[Math.floor(Math.random() * availableAgents.length)];
-      const agentId = randomAgent._id;
+      // const randomAgent =
+      //   availableAgents[Math.floor(Math.random() * availableAgents.length)];
+      // const agentId = randomAgent._id;
+
+      const agent = await User.findOneAndUpdate(
+      {
+        isAgent: true,
+        isAvailable: true,
+        _id: { $in: Array.from(onlineAgents.keys()) },
+        $expr: { $lt: ["$currentLoad", "$maxLoad"] },
+      },
+      {
+        $inc: { currentLoad: 1 },
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!agent) {
+       res.status(503).json({ error: "No available agents online" });
+       return
+    }
+   const agentId = agent._id;
 
       let room = await Room.findOne({
         participants: { $size: 2, $all: [userId, agentId] },
@@ -59,7 +78,10 @@ class RoomController {
           agentAssigned: agentId,
         });
       }
-
+      // await User.findByIdAndUpdate(agentId, { $inc: { currentLoad: 1 } });
+      if (agent.currentLoad + 1 >= agent.maxLoad) {
+        await User.findByIdAndUpdate(agentId, { isAvailable: false });
+      }
       res.status(200).json(room);
     } catch (error) {
       console.error("Failed to create/get room:", error);
@@ -68,35 +90,43 @@ class RoomController {
   };
 
   endChat = async (req: express.Request, res: express.Response) => {
-  const { roomId } = req.params;
+    const { roomId } = req.params;
 
-  try {
-    const room = await Room.findById(roomId);
-    if (!room) {
-       res.status(404).json({ error: "Room not found" });
-       return
+    try {
+      const room = await Room.findById(roomId);
+      if (!room) {
+        res.status(404).json({ error: "Room not found" });
+        return;
+      }
+
+      room.isChatEnded = true;
+      await room.save();
+
+      //frontend guys needs to emit this event to all users in the room to tell them that the chat has ended
+      io.to(roomId).emit("chat-ended", { msg: "Chat has been ended by user." });
+
+      await User.findByIdAndUpdate(room.agentAssigned, {
+        $inc: { currentLoad: -1 },
+      });
+      const agent = await User.findById(room.agentAssigned);
+if (agent && agent.currentLoad < agent.maxLoad && !agent.isAvailable) {
+  agent.isAvailable = true;
+  await agent.save();
+}
+      res.status(200).json({ message: "Chat ended successfully" });
+    } catch (error) {
+      console.error("Error ending chat:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
+  };
 
-    room.isChatEnded = true;
-    await room.save();
-
-    //frontend guys needs to emit this event to all users in the room to tell them that the chat has ended
-    io.to(roomId).emit("chat-ended", { msg: "Chat has been ended by user." });
-
-    res.status(200).json({ message: "Chat ended successfully" });
-  } catch (error) {
-    console.error("Error ending chat:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-submitFeedback = async (req: express.Request, res: express.Response) => {
-  const { roomId, rating, comment } = req.body;
-const firebaseUID = req.user?.uid;
-  if (!firebaseUID) {
-    res.status(400).json({ error: "User not authenticated" });
-    return;
-  }
+  submitFeedback = async (req: express.Request, res: express.Response) => {
+    const { roomId, rating, comment } = req.body;
+    const firebaseUID = req.user?.uid;
+    if (!firebaseUID) {
+      res.status(400).json({ error: "User not authenticated" });
+      return;
+    }
 
     const currentUser = await User.findOne({ firebaseUID });
 
@@ -106,47 +136,45 @@ const firebaseUID = req.user?.uid;
     }
     const userId = currentUser._id;
 
-  if (!roomId || !rating) {
-     res.status(400).json({ error: "Missing required fields" });
-     return
-  }
-
-  try {
-    const room = await Room.findById(roomId);
-    if (!room || !room.isChatEnded) {
-       res.status(400).json({ error: "Chat not ended or room not found" });
-       return
-    }
-
-    if (room.feedbackGiven) {
-       res.status(400).json({ error: "Feedback already submitted" });
-       return
-    }
-
-    if (!room.participants.includes(userId)) {
-      res.status(403).json({ error: "User not part of the room" });
+    if (!roomId || !rating) {
+      res.status(400).json({ error: "Missing required fields" });
       return;
     }
 
-    const feedback=new Feedback({
-      roomId,
-      agentId: room.agentAssigned,
-      userId,
-      rating,
-      comment,
-    })
-    await feedback.save();
-    room.feedbackGiven = true;
-    await room.save();
+    try {
+      const room = await Room.findById(roomId);
+      if (!room || !room.isChatEnded) {
+        res.status(400).json({ error: "Chat not ended or room not found" });
+        return;
+      }
 
-    res.status(200).json({ message: "Feedback recorded successfully" });
-  } catch (err) {
-    console.error("Feedback error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
+      if (room.feedbackGiven) {
+        res.status(400).json({ error: "Feedback already submitted" });
+        return;
+      }
 
+      if (!room.participants.includes(userId)) {
+        res.status(403).json({ error: "User not part of the room" });
+        return;
+      }
 
+      const feedback = new Feedback({
+        roomId,
+        agentId: room.agentAssigned,
+        userId,
+        rating,
+        comment,
+      });
+      await feedback.save();
+      room.feedbackGiven = true;
+      await room.save();
+
+      res.status(200).json({ message: "Feedback recorded successfully" });
+    } catch (err) {
+      console.error("Feedback error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
 
   createMessage = async (req: express.Request, res: express.Response) => {
     try {
@@ -221,18 +249,17 @@ const firebaseUID = req.user?.uid;
       const messages = await Message.find({ roomId })
         .populate("senderId", "fullName email")
         .sort({ createdAt: 1 });
-        if(!messages || messages.length === 0) {
-          res.status(404).json({ error: "No messages found for this room" });
-          return;
-        }
+      if (!messages || messages.length === 0) {
+        res.status(404).json({ error: "No messages found for this room" });
+        return;
+      }
       res.status(200).json(messages);
-  }
-  catch (error) {
+    } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ error: "Internal server error" });
       return;
     }
-}
+  };
 }
 
 export default new RoomController();
