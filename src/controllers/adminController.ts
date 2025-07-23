@@ -90,6 +90,7 @@ class AdminController {
       res.status(500).json({ message: "Error deleting user", error });
     }
   };
+
 }
 
 export default new AdminController();
