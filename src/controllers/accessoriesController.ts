@@ -3,30 +3,29 @@ import { Product } from "../models/productModel";
 import express from "express";
 import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
+import { Inventory } from "../models/inventoryModel";
+import { Warehouse } from "../models/warehouseModel";
+import mongoose from "mongoose";
 
 class AccessoriesController {
   createAccessories = async (req: express.Request, res: express.Response) => {
     const {
       brand,
       price,
-      stock,
       description,
       name,
-      discount,
+      discount = 0,
       tags,
       gender,
-      folder = "accessories",
+      threshold,
+      stockByWarehouse,
     } = req.body;
-    const folderType = req.body.folder || req.query.folder || "others";
-    if (
-      !brand ||
-      !price ||
-      !stock ||
-      !description
-    ) {
-      res.status(400).json({ message: "All fields are required" });
+
+    if (!brand || !price || !description || !stockByWarehouse || !name) {
+      res.status(400).json({ message: "Missing required fields" });
       return;
     }
+
     if (!req.file) {
       res.status(400).json({ message: "Image file is required" });
       return;
@@ -36,42 +35,68 @@ class AccessoriesController {
       const uploaded = await uploadBufferToCloudinary(
         req.file.buffer,
         req.file.originalname,
-        folderType
+        "accessories"
       );
 
-      if (!uploaded) {
-        res.status(500).json({ message: "Failed to upload image" });
+      if (!uploaded || typeof uploaded === "string") {
+        res.status(500).json({ message: "Image upload failed" });
         return;
       }
-      const newAccessories = new Accessories({
+
+      const parsedStock: Record<string, number> = JSON.parse(stockByWarehouse);
+      const totalStock = Object.values(parsedStock).reduce((sum, val) => sum + Number(val), 0);
+
+      const finalPrice = discount > 0 ? Math.round(price - (price * discount) / 100) : price;
+
+      const newAccessory = await new Accessories({
         brand,
         price,
-        stock,
+        stock: totalStock,
         description,
+        discount,
+        finalPrice,
         imageUrl: uploaded.secure_url,
         imagePublicId: uploaded.public_id,
-      });
-      const savedAccessories = await newAccessories.save();
+        gender,
+      }).save();
 
-      const newProduct = new Product({
+      const product = await new Product({
         type: "accessories",
         name,
-        discount,
-        finalPrice:
-          discount > 0 ? Math.round(price - (price * discount) / 100) : price,
         tags,
-        gender,
-        accessoriesRef: savedAccessories._id,
+        accessoriesRef: newAccessory._id,
+      }).save();
+
+      const warehouses = await Warehouse.find({
+        warehouseName: { $in: Object.keys(parsedStock) },
       });
-      const savedProduct = await newProduct.save();
+
+      const warehouseMap = new Map<string, mongoose.Types.ObjectId>();
+      warehouses.forEach(w => warehouseMap.set(w.warehouseName, w._id));
+
+      const inventoryItems = Object.entries(parsedStock).map(([warehouseName, stock]) => ({
+        productId: product._id,
+        SKU: `ACC-${Date.now().toString(36).toUpperCase()}-${Math.random()
+          .toString(36)
+          .slice(2, 6)
+          .toUpperCase()}`,
+        stock: Number(stock),
+        threshold,
+        warehouseId: warehouseMap.get(warehouseName),
+      }));
+
+      const savedInventory = await Inventory.insertMany(inventoryItems);
+
       res.status(201).json({
-        message: "Accessories and Product created successfully",
-        accessories: savedAccessories,
-        product: savedProduct,
+        message: "Accessory created with product and inventory",
+        accessory: newAccessory,
+        product,
+        inventory: savedInventory,
       });
-    } catch (error) {
-      console.error("Error creating accessories:", error);
+    } catch (err) {
+      console.error("Error:", err);
       res.status(500).json({ message: "Internal server error" });
+      return;
     }
   };
 
@@ -134,30 +159,53 @@ class AccessoriesController {
     const {
       brand,
       price,
-      stock,
       description,
-      productName,
-      discount,
-      tags,
       gender,
-      folder = "accessories",
+      discount,
+      productName,
+      tags,
+      folder = "accessories"
     } = req.body;
-    const folderType = req.body.folder || req.query.folder || "others";
+
+    const folderType = req.body.folder || req.query.folder || "accessories";
+
     try {
-      const accessories = await Accessories.findById(accessoriesId);
-      if (!accessories) {
+      const accessory = await Accessories.findById(accessoriesId);
+      if (!accessory) {
         res.status(404).json({ message: "Accessories not found" });
         return;
       }
-      const updatedData: any = {};
-      if (brand) updatedData.brand = brand;
-      if (price) updatedData.price = price;
-      if (stock) updatedData.stock = stock;
-      if (description) updatedData.description = description;
-      if (req.file) {
-        if (accessories.imagePublicId) {
-          await cloudinary.uploader.destroy(accessories.imagePublicId);
+
+      const updatedFields: any = {};
+
+      if (brand) updatedFields.brand = brand;
+      if (price) updatedFields.price = price;
+      if (description) updatedFields.description = description;
+
+      if (gender) {
+        const allowedGenders = (Accessories.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          updatedFields.gender = gender;
+        } else {
+          res.status(400).json({ message: "Invalid gender value." });
+          return;
         }
+      }
+
+      if (discount !== undefined) {
+        updatedFields.discount = discount;
+        const basePrice = price !== undefined ? price : accessory.price;
+        updatedFields.finalPrice =
+          discount > 0
+            ? Math.round(basePrice - (basePrice * discount) / 100)
+            : basePrice;
+      }
+
+      if (req.file) {
+        if (accessory.imagePublicId) {
+          await cloudinary.uploader.destroy(accessory.imagePublicId);
+        }
+
         try {
           const uploaded = await uploadBufferToCloudinary(
             req.file.buffer,
@@ -166,65 +214,55 @@ class AccessoriesController {
           );
 
           if (!uploaded) {
-            res.status(500).json({ message: "Failed to upload image" });
+            res.status(500).json({ message: "Image upload failed" });
             return;
           }
-          const imageUrl = uploaded.secure_url;
-          const imagePublicId = uploaded.public_id;
-          updatedData.imagePublicId = imagePublicId;
-          updatedData.imageUrl = imageUrl;
+
+          updatedFields.imageUrl = uploaded.secure_url;
+          updatedFields.imagePublicId = uploaded.public_id;
         } catch (cloudErr) {
           console.error("Cloudinary upload error:", cloudErr);
           res.status(500).json({ message: "Image upload failed" });
           return;
         }
       }
-      Object.assign(accessories, updatedData);
-      const updatedAccessories = await accessories.save();
+
+      Object.assign(accessory, updatedFields);
+      const updatedAccessories = await accessory.save();
+
       if (!updatedAccessories) {
-        res.status(404).json({ message: "Updated Accessories not found" });
+        res.status(404).json({ message: "Updated accessories not found" });
         return;
       }
+
       const updatedProductData: any = {};
       if (productName) updatedProductData.name = productName;
-      if(gender){
-        const allowedGenders = (Product.schema.path("gender") as any).enumValues;
-        if (allowedGenders.includes(gender)) {  
-          updatedProductData.gender=gender;
-        }
-      }
-      if (discount) {
-        updatedProductData.discount = discount;
-        updatedProductData.finalPrice =
-          discount > 0
-            ? Math.round(
-                updatedAccessories.price - (updatedAccessories.price * discount) / 100
-              )
-            : updatedAccessories.price;
-      }
       if (tags) updatedProductData.tags = tags;
+
       const updatedProduct = await Product.findOneAndUpdate(
         { accessoriesRef: accessoriesId },
         updatedProductData,
         { new: true }
       );
+
       if (!updatedProduct) {
-        res.status(404).json({ message: "Updated Product not found" });
+        res.status(404).json({ message: "Related product not found" });
         return;
       }
 
-      res
-        .status(200)
-        .json({
-          message: "Accessories updated successfully",
-          accessories: updatedAccessories,
-          product: updatedProduct,
-        });
+      res.status(200).json({
+        message: "Accessories and product updated successfully",
+        accessories: updatedAccessories,
+        product: updatedProduct,
+      });
     } catch (error) {
       console.error("Error updating accessories:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
+
+
+
 
   deleteAccessories = async (req: express.Request, res: express.Response) => {
     const { accessoriesId } = req.params;

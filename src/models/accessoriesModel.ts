@@ -9,6 +9,18 @@ const AccessoriesSchema = new Schema(
     price: {
       type: Number,
       required: true,
+    }, discount: {
+      type: Number,
+      default: 0,
+    },
+    finalPrice: {
+      type: Number,
+      required: true,
+    },
+    gender: {
+      type: String,
+      enum: ["men", "women", "unisex"],
+      default: "unisex",
     },
     stock: {
       type: Number,
