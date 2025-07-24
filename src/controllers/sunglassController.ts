@@ -3,110 +3,114 @@ import { Product } from "../models/productModel";
 import express from "express";
 import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
+import { Inventory } from "../models/inventoryModel";
+import { Warehouse } from "../models/warehouseModel";
+import mongoose from "mongoose";
 
 class SunglassController {
   createSunglass = async (req: express.Request, res: express.Response) => {
     const {
-      brand,
-      frameType,
-      lensShape,
-      material,
-      price,
-      stock,
-      description,
-      color,
-      size,
       name,
-      discount,
-      tags,
+      brand,
+      material,
+      lensShape,
+      description,
+      price,
+      frameType,
+      size,
+      color,
       gender,
-      folder = "sunglasses",
+      discount = 0,
+      threshold,
+      stockByWarehouse,
+      tags,
     } = req.body;
-    const folderType = req.body.folder || req.query.folder || "others";
-    if (
-      !brand ||
-      !frameType ||
-      !price ||
-      !stock ||
-      !description ||
-      !color ||
-      !size ||
-      !lensShape ||
-      !material
-    ) {
-      res.status(400).json({ message: "All fields are required" });
+
+    if (!name ||!brand|| !description || !material ||!lensShape || !price || !frameType || !size || !color || !stockByWarehouse) {
+      res.status(400).json({ message: "Missing required fields" });
       return;
     }
 
-    const allowedFrameTypes = (Sunglass.schema.path("frameType") as any)
-      .enumValues;
-    if (!allowedFrameTypes.includes(frameType)) {
-      res.status(400).json({ message: `Invalid frame type value.` });
-      return;
-    }
-    const allowedLensShapes = (Sunglass.schema.path("lensShape") as any)
-      .enumValues;
-    if (!allowedLensShapes.includes(lensShape)) {
-      res.status(400).json({ message: `Invalid lens shape value.` });
-      return;
-    }
-    const allowedSizes = (Sunglass.schema.path("size") as any).enumValues;
-    if (!allowedSizes.includes(size)) {
-      res.status(400).json({ message: `Invalid size value.` });
-      return;
-    }
     if (!req.file) {
       res.status(400).json({ message: "Image file is required" });
       return;
     }
 
-    try {
+    try{
       const uploaded = await uploadBufferToCloudinary(
         req.file.buffer,
         req.file.originalname,
-        folderType
+        "sunglasses"
       );
 
-      if (!uploaded) {
-        res.status(500).json({ message: "Failed to upload image" });
+      if (!uploaded || typeof uploaded === "string") {
+        res.status(500).json({ message: "Image upload failed" });
         return;
       }
-      const newSunglass = new Sunglass({
+
+      const parsedStock: Record<string, number> = JSON.parse(stockByWarehouse);
+      const totalStock = Object.values(parsedStock).reduce((sum, val) => sum + Number(val), 0);
+
+      const finalPrice = discount > 0 ? Math.round(price - (price * discount) / 100) : price;
+
+      const newSunglass = await new Sunglass({
+        name,
         brand,
+        price,
         frameType,
+        size,
         lensShape,
         material,
-        price,
-        stock,
         description,
+        color,
+        gender,
+        discount,
+        finalPrice,
         imageUrl: uploaded.secure_url,
         imagePublicId: uploaded.public_id,
-        color,
-        size,
-      });
-      const savedSunglass = await newSunglass.save();
+        stock: totalStock,
+      }).save();
 
-      const newProduct = new Product({
+      const product = await new Product({
         type: "sunglasses",
         name,
-        discount,
-        finalPrice:
-          discount > 0 ? Math.round(price - (price * discount) / 100) : price,
         tags,
-        gender,
-        sunglassesRef: savedSunglass._id,
+        sunglassesRef: newSunglass._id,
+      }).save();
+
+      const warehouses = await Warehouse.find({
+        warehouseName: { $in: Object.keys(parsedStock) },
       });
-      const savedProduct = await newProduct.save();
+
+      const warehouseMap = new Map<string, mongoose.Types.ObjectId>();
+      warehouses.forEach(w => warehouseMap.set(w.warehouseName, w._id));
+
+      const inventoryItems = Object.entries(parsedStock).map(([warehouseName, stock]) => ({
+        productId: product._id,
+        SKU: `SUN-${Date.now().toString(36).toUpperCase()}-${Math.random()
+          .toString(36)
+          .slice(2, 6)
+          .toUpperCase()}`,
+        stock: Number(stock),
+        threshold,
+        warehouseId: warehouseMap.get(warehouseName),
+      }));
+
+      const savedInventory = await Inventory.insertMany(inventoryItems);
+
       res.status(201).json({
-        message: "Sunglass and Product created successfully",
-        sunglass: savedSunglass,
-        product: savedProduct,
+        message: "Sunglass created with product and inventory",
+        sunglass: newSunglass,
+        product,
+        inventory: savedInventory,
       });
-    } catch (error) {
-      console.error("Error creating sunglass:", error);
+    } catch (err) {
+      console.error("Error:", err);
       res.status(500).json({ message: "Internal server error" });
+      return;
     }
   };
+
 
   getAllSunglasses = async (req: express.Request, res: express.Response) => {
     const { skip, take } = req.pagination!;
@@ -210,142 +214,105 @@ class SunglassController {
     }
   };
 
-  updateSunglassProduct = async (
-    req: express.Request,
-    res: express.Response
-  ) => {
+  updateSunglassProduct = async (req: express.Request, res: express.Response) => {
     const { sunglassId } = req.params;
     const {
+      name,
       brand,
       frameType,
       lensShape,
       material,
       price,
-      stock,
-      description,
       color,
-      size,
-      productName,
-      gender,
+      description,
       discount,
+      gender,
+      size,
       tags,
-      folder = "sunglasses",
     } = req.body;
-    const folderType = req.body.folder || req.query.folder || "others";
+
     try {
+      
       const sunglass = await Sunglass.findById(sunglassId);
       if (!sunglass) {
         res.status(404).json({ message: "Sunglass not found" });
         return;
       }
-      const updatedData: any = {};
-      if (brand) updatedData.brand = brand;
-      if (frameType) {
-        const allowedTypes = (Sunglass.schema.path("frameType") as any)
-          .enumValues;
-        if (allowedTypes.includes(frameType)) {
-          updatedData.frameType = frameType;
-        } else {
-          res.status(400).json({ message: `Invalid type value.` });
-          return;
-        }
+
+      const updatedFields: any = {};
+      if (brand) updatedFields.brand = brand;
+      if (frameType) updatedFields.frameType = frameType;
+      if (lensShape) updatedFields.lensShape = lensShape;
+      if (material) updatedFields.material = material;
+      if (price) updatedFields.price = price;
+      if (color) updatedFields.color = color;
+      if (description) updatedFields.description = description;
+      if (gender) updatedFields.gender = gender;
+      if (size) updatedFields.size = size;
+
+      if (discount !== undefined || price !== undefined) {
+        const basePrice = price !== undefined ? price : sunglass.price;
+        const newDiscount = discount !== undefined ? discount : sunglass.discount;
+        updatedFields.discount = newDiscount;
+        updatedFields.finalPrice =
+          newDiscount > 0
+            ? Math.round(basePrice - (basePrice * newDiscount) / 100)
+            : basePrice;
       }
-      if (lensShape) {
-        const allowedTypes = (Sunglass.schema.path("lensShape") as any)
-          .enumValues;
-        if (allowedTypes.includes(lensShape)) {
-          updatedData.lensShape = lensShape;
-        } else {
-          res.status(400).json({ message: `Invalid shape value.` });
-          return;
-        }
-      }
-      if (size) {
-        const allowedTypes = (Sunglass.schema.path("size") as any).enumValues;
-        if (allowedTypes.includes(size)) {
-          updatedData.size = size;
-        } else {
-          res.status(400).json({ message: `Invalid size value.` });
-          return;
-        }
-      }
-      if (price) updatedData.price = price;
-      if (stock) updatedData.stock = stock;
-      if (description) updatedData.description = description;
-      if (color) updatedData.color = color;
-      if (material) updatedData.material = material;
+
       if (req.file) {
         if (sunglass.imagePublicId) {
           await cloudinary.uploader.destroy(sunglass.imagePublicId);
         }
-        try {
-          const uploaded = await uploadBufferToCloudinary(
-            req.file.buffer,
-            req.file.originalname,
-            folderType
-          );
 
-          if (!uploaded) {
-            res.status(500).json({ message: "Failed to upload image" });
-            return;
-          }
-          const imageUrl = uploaded.secure_url;
-          const imagePublicId = uploaded.public_id;
-          updatedData.imagePublicId = imagePublicId;
-          updatedData.imageUrl = imageUrl;
-        } catch (cloudErr) {
-          console.error("Cloudinary upload error:", cloudErr);
-          res.status(500).json({ message: "Image upload failed" });
+        const uploaded = await uploadBufferToCloudinary(
+          req.file.buffer,
+          req.file.originalname,
+          "sunglasses"
+        );
+
+        if (!uploaded || typeof uploaded === "string") {
+          res.status(500).json({ message: "New image upload failed" });
           return;
         }
+        updatedFields.imageUrl = uploaded.secure_url;
+        updatedFields.imagePublicId = uploaded.public_id;
       }
-      Object.assign(sunglass, updatedData);
+
+      Object.assign(sunglass, updatedFields);
       const updatedSunglass = await sunglass.save();
-      if (!updatedSunglass) {
-        res.status(404).json({ message: "Updated Sunglass not found" });
-        return;
-      }
+
       const updatedProductData: any = {};
-      if (productName) updatedProductData.name = productName;
-      if (gender) {
-        const allowedGenders = (Product.schema.path("gender") as any)
-          .enumValues;
-        if (allowedGenders.includes(gender)) {
-          updatedProductData.gender = gender;
-        }
-      }
-      if (discount) {
-        updatedProductData.discount = discount;
-        updatedProductData.finalPrice =
-          discount > 0
-            ? Math.round(
-                updatedSunglass.price - (updatedSunglass.price * discount) / 100
-              )
-            : updatedSunglass.price;
-      }
+      if (name) updatedProductData.name = name;
       if (tags) updatedProductData.tags = tags;
-      const updatedProduct = await Product.findOneAndUpdate(
-        { sunglassesRef: sunglassId },
-        updatedProductData,
-        { new: true }
-      );
-      if (!updatedProduct) {
-        res.status(404).json({ message: "Updated Product not found" });
-        return;
+
+      let updatedProduct;
+      if (Object.keys(updatedProductData).length > 0) {
+        updatedProduct = await Product.findOneAndUpdate(
+          { sunglassesRef: sunglassId },
+          { $set: updatedProductData },
+          { new: true }
+        );
+      } else {
+        updatedProduct = await Product.findOne({ sunglassesRef: sunglassId });
       }
 
       res.status(200).json({
-        message: "Sunglass updated successfully",
+        message: "Sunglass and associated product updated successfully",
         sunglass: updatedSunglass,
         product: updatedProduct,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        res.status(400).json({ message: "Validation Error", details: error.message });
+        return;
+      }
       console.error("Error updating sunglass:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
 
-  deleteSunglass = async (req: express.Request, res: express.Response) => {
+    deleteSunglass = async (req: express.Request, res: express.Response) => {
     const { sunglassId } = req.params;
     try {
       const sunglass = await Sunglass.findById(sunglassId);
@@ -366,6 +333,7 @@ class SunglassController {
       res.status(500).json({ message: "Internal server error" });
     }
   };
+
 
   getSunglassesByPriceRange = async (
     req: express.Request,

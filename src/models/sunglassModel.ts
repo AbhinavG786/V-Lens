@@ -37,6 +37,19 @@ const sunglassesSchema = new Schema(
         type: String,
         required: true,
     },
+     discount: {
+      type: Number,
+      default: 0,
+    },
+    finalPrice: {
+      type: Number,
+      required: true,
+    },
+    gender: {
+      type: String,
+      enum: ["men", "women", "unisex"],
+      default: "unisex",
+    },
     size: 
       {
         type: String,
