@@ -29,12 +29,20 @@ const EyeglassModelSchema = new Schema(
       type: String,
       required: true,
     },
+    discount: {
+      type: Number,
+      default: 0,
+    },
     gender: {
       type: String,
       enum: ["men", "women", "unisex"],
       required: true,
     },
     price: {
+      type: Number,
+      required: true,
+    },
+    finalPrice: {
       type: Number,
       required: true,
     },
