@@ -23,7 +23,7 @@ class UserController {
   };
 
   updateUser = async (req: express.Request, res: express.Response) => {
-    const { fullName, email, gender,phone,folder="user" } = req.body;
+    const { fullName, gender,phone,folder="user" } = req.body;
     const folderType = req.body.folder || req.query.folder || "others";
     const firebaseUID=req.user?.uid;
     if (!firebaseUID) {
@@ -38,7 +38,6 @@ class UserController {
       }
         const updatedData: any = {};
         if (fullName) updatedData.fullName = fullName;
-        if (email) updatedData.email = email;
         if (phone) updatedData.phone = phone;
         
         if (gender) {
