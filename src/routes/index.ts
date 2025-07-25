@@ -22,6 +22,7 @@ import sunglassRoutes from "./sunglassRoutes";
 import appointmentRoutes from "./appointmentRoutes";
 import warehouseRoutes from "./warehouseRoutes";
 import eyeglassRoutes from "./eyeglassRoutes";
+import storeRoutes from "./storeRoutes";
 
 
 const router = Router();
@@ -50,5 +51,6 @@ router.use("/sunglasses", sunglassRoutes);
 router.use("/eyeglasses", eyeglassRoutes);
 router.use("/appointments", appointmentRoutes);
 router.use("/warehouse", warehouseRoutes);
+router.use("/stores", storeRoutes);
 
 export default router;

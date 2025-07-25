@@ -2,8 +2,8 @@ import mongoose, { Schema, InferSchemaType } from 'mongoose';
 
 const StoreSchema = new Schema({
   name: { type: String, required: true },
-  address: String,
-  location: { 
+  address: { type: String, required: true },
+  location: {
     type: { type: String, default: 'Point' },
     coordinates: { type: [Number], required: true }, // [lng, lat]
   },
