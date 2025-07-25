@@ -68,9 +68,16 @@ class CartController {
       }
       const userId = mongoUser._id;
 
+      // const cart = await Cart.findOne({ userId }).populate({
+      //   path: 'items.productId',
+      //   model: 'Product'
+      // });
       const cart = await Cart.findOne({ userId }).populate({
         path: 'items.productId',
-        model: 'Product'
+        model: 'Product',
+        populate: {
+          path: 'lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef',
+        }
       });
 
       if (!cart) {

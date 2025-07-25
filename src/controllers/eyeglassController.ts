@@ -3,6 +3,9 @@ import { Product } from "../models/productModel";
 import express from "express";
 import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
+import mongoose from "mongoose";
+import { Warehouse } from "../models/warehouseModel";
+import { Inventory } from "../models/inventoryModel";
 
 class EyeglassController {
   createEyeglass = async (req: express.Request, res: express.Response) => {
@@ -13,35 +16,17 @@ class EyeglassController {
       frameShape,
       frameMaterial,
       frameColor,
-      gender,
       price,
-      stock,
+      gender,
       description,
-      name,
-      discount,
+      discount = 0,
+      stockByWarehouse,
+      threshold,
       tags,
-      folder = "eyeglass",
     } = req.body;
-    const folderType = req.body.folder || req.query.folder || "others";
-    
-    if (
-      !modelName ||
-      !brand ||
-      !frameType ||
-      !frameShape ||
-      !frameMaterial ||
-      !frameColor ||
-      !gender ||
-      !price ||
-      !stock ||
-      !description
-    ) {
-      res.status(400).json({ message: "All fields are required" });
-      return;
-    }
-    
-    if (!req.file) {
-      res.status(400).json({ message: "Image file is required" });
+
+    if (!modelName || !brand || !frameType || !price || !stockByWarehouse || !req.file) {
+      res.status(400).json({ message: "Missing required fields or image file" });
       return;
     }
 
@@ -49,50 +34,76 @@ class EyeglassController {
       const uploaded = await uploadBufferToCloudinary(
         req.file.buffer,
         req.file.originalname,
-        folderType
+        "eyeglasses"
       );
-
-      if (!uploaded) {
-        res.status(500).json({ message: "Failed to upload image" });
-        return;
+      if (!uploaded || typeof uploaded === "string") {
+        throw new Error("Image upload to Cloudinary failed.");
       }
-      
-      const newEyeglass = new EyeglassModel({
+
+      const parsedStock: Record<string, number> = JSON.parse(stockByWarehouse);
+      const totalStock = Object.values(parsedStock).reduce((sum, val) => sum + Number(val), 0);
+      const finalPrice = discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
+
+      const eyeglass = new EyeglassModel({
         modelName,
         brand,
         frameType,
         frameShape,
         frameMaterial,
         frameColor,
-        gender,
         price,
-        stock,
+        gender,
         description,
+        discount,
+        finalPrice,
+        stock: totalStock,
         imageUrl: uploaded.secure_url,
         imagePublicId: uploaded.public_id,
       });
-      const savedEyeglass = await newEyeglass.save();
+      const newEyeglass = await eyeglass.save();
 
-      const newProduct = new Product({
+      const product = new Product({
         type: "eyeglasses",
-        name,
-        discount,
-        finalPrice:
-          discount > 0 ? Math.round(price - (price * discount) / 100) : price,
-        tags,
-        gender,
-        eyeglassRef: savedEyeglass._id,
+        name: newEyeglass.modelName,
+        tags: tags,
+        eyeglassesRef: newEyeglass._id,
       });
-      const savedProduct = await newProduct.save();
-      
+      const newProduct = await product.save();
+
+      const warehouses = await Warehouse.find({
+        warehouseName: { $in: Object.keys(parsedStock) },
+      });
+
+      const warehouseMap = new Map(warehouses.map(w => [w.warehouseName, w._id]));
+
+      const inventoryItems = Object.entries(parsedStock).map(([warehouseName, stock]) => ({
+        productId: newProduct._id,
+        SKU: `EYE-${Date.now().toString(36).toUpperCase()}-${Math.random()
+          .toString(36)
+          .slice(2, 6)
+          .toUpperCase()}`,
+        stock: Number(stock),
+        threshold,
+        warehouseId: warehouseMap.get(warehouseName),
+      }));
+      const savedInventory = await Inventory.insertMany(inventoryItems);
+
       res.status(201).json({
-        message: "Eyeglass and Product created successfully",
-        eyeglass: savedEyeglass,
-        product: savedProduct,
+        message: "Eyeglass created successfully with product and inventory records.",
+        eyeglass: newEyeglass,
+        product: newProduct,
+        inventory: savedInventory,
       });
-    } catch (error) {
+
+    } catch (error: any) {
+      
+      if (error.name === 'ValidationError') {
+        res.status(400).json({ message: "Validation Error", details: error.message });
+        return;
+      }
       console.error("Error creating eyeglass:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Internal server error." });
+      return;
     }
   };
 
@@ -260,6 +271,8 @@ class EyeglassController {
 
   updateEyeglassProduct = async (req: express.Request, res: express.Response) => {
     const { eyeglassId } = req.params;
+    console.log("ID received:", eyeglassId);
+    console.log("Querying collection:", EyeglassModel.collection.name);
     const {
       modelName,
       brand,
@@ -269,134 +282,88 @@ class EyeglassController {
       frameColor,
       gender,
       price,
-      stock,
       description,
-      productName,
       discount,
+      stock,
       tags,
-      folder = "eyeglass",
     } = req.body;
-    const folderType = req.body.folder || req.query.folder || "others";
-    
+
     try {
       const eyeglass = await EyeglassModel.findById(eyeglassId);
+      console.log("Result from findById:", eyeglass);
       if (!eyeglass) {
         res.status(404).json({ message: "Eyeglass not found" });
         return;
       }
-      
-      const updatedData: any = {};
-      if (modelName) updatedData.modelName = modelName;
-      if (brand) updatedData.brand = brand;
-      if (frameType) {
-        const allowedFrameTypes = (EyeglassModel.schema.path("frameType") as any).enumValues;
-        if (allowedFrameTypes.includes(frameType)) {
-          updatedData.frameType = frameType;
-        } else {
-          res.status(400).json({ message: `Invalid frame type value.` });
-          return;
-        }
+
+      const updatedFields: any = {};
+
+      if (modelName) updatedFields.modelName = modelName;
+      if (brand) updatedFields.brand = brand;
+      if (frameType) updatedFields.frameType = frameType;
+      if (frameShape) updatedFields.frameShape = frameShape;
+      if (frameMaterial) updatedFields.frameMaterial = frameMaterial;
+      if (frameColor) updatedFields.frameColor = frameColor;
+      if (gender) updatedFields.gender = gender;
+      if (price !== undefined) updatedFields.price = price;
+      //if (stock !== undefined) updatedFields.stock = stock;
+      if (description) updatedFields.description = description;
+
+      if (discount !== undefined || price !== undefined) {
+        const basePrice = price !== undefined ? price : eyeglass.price;
+        const newDiscount = discount !== undefined ? discount : eyeglass.discount;
+        updatedFields.discount = newDiscount;
+        updatedFields.finalPrice =
+          newDiscount > 0
+            ? Math.round(basePrice * (1 - newDiscount / 100))
+            : basePrice;
       }
-      if (frameShape) {
-        const allowedFrameShapes = (EyeglassModel.schema.path("frameShape") as any).enumValues;
-        if (allowedFrameShapes.includes(frameShape)) {
-          updatedData.frameShape = frameShape;
-        } else {
-          res.status(400).json({ message: `Invalid frame shape value.` });
-          return;
-        }
-      }
-      if (frameMaterial) {
-        const allowedFrameMaterials = (EyeglassModel.schema.path("frameMaterial") as any).enumValues;
-        if (allowedFrameMaterials.includes(frameMaterial)) {
-          updatedData.frameMaterial = frameMaterial;
-        } else {
-          res.status(400).json({ message: `Invalid frame material value.` });
-          return;
-        }
-      }
-      if (frameColor) updatedData.frameColor = frameColor;
-      if (gender) {
-        const allowedGenders = (EyeglassModel.schema.path("gender") as any).enumValues;
-        if (allowedGenders.includes(gender)) {
-          updatedData.gender = gender;
-        } else {
-          res.status(400).json({ message: `Invalid gender value.` });
-          return;
-        }
-      }
-      if (price) updatedData.price = price;
-      if (stock) updatedData.stock = stock;
-      if (description) updatedData.description = description;
-      
+
       if (req.file) {
         if (eyeglass.imagePublicId) {
           await cloudinary.uploader.destroy(eyeglass.imagePublicId);
         }
-        try {
-          const uploaded = await uploadBufferToCloudinary(
-            req.file.buffer,
-            req.file.originalname,
-            folderType
-          );
+        const uploaded = await uploadBufferToCloudinary(
+          req.file.buffer,
+          req.file.originalname,
+          "eyeglasses"
+        );
+        if (!uploaded || typeof uploaded === "string") {
+          throw new Error("Image upload to Cloudinary failed.");
+        }
+        updatedFields.imageUrl = uploaded.secure_url;
+        updatedFields.imagePublicId = uploaded.public_id;
+      }
 
-          if (!uploaded) {
-            res.status(500).json({ message: "Failed to upload image" });
-            return;
-          }
-          const imageUrl = uploaded.secure_url;
-          const imagePublicId = uploaded.public_id;
-          updatedData.imagePublicId = imagePublicId;
-          updatedData.imageUrl = imageUrl;
-        } catch (cloudErr) {
-          console.error("Cloudinary upload error:", cloudErr);
-          res.status(500).json({ message: "Image upload failed" });
-          return;
-        }
-      }
-      
-      Object.assign(eyeglass, updatedData);
+      Object.assign(eyeglass, updatedFields);
       const updatedEyeglass = await eyeglass.save();
-      if (!updatedEyeglass) {
-        res.status(404).json({ message: "Updated Eyeglass not found" });
-        return;
-      }
-      
+
       const updatedProductData: any = {};
-      if (productName) updatedProductData.name = productName;
-      if (gender) {
-        const allowedGenders = (Product.schema.path("gender") as any).enumValues;
-        if (allowedGenders.includes(gender)) {
-          updatedProductData.gender = gender;
-        }
-      }
-      if (discount) {
-        updatedProductData.discount = discount;
-        updatedProductData.finalPrice =
-          discount > 0
-            ? Math.round(
-                updatedEyeglass.price - (updatedEyeglass.price * discount) / 100
-              )
-            : updatedEyeglass.price;
-      }
+      if (modelName) updatedProductData.name = modelName;
       if (tags) updatedProductData.tags = tags;
       
-      const updatedProduct = await Product.findOneAndUpdate(
-        { eyeglassRef: eyeglassId },
-        updatedProductData,
-        { new: true }
-      );
-      if (!updatedProduct) {
-        res.status(404).json({ message: "Updated Product not found" });
-        return;
+      let updatedProduct;
+      if (Object.keys(updatedProductData).length > 0) {
+        updatedProduct = await Product.findOneAndUpdate(
+          { eyeglassesRef: eyeglassId }, 
+          { $set: updatedProductData },
+          { new: true }
+        );
+      } else {
+        updatedProduct = await Product.findOne({ eyeglassesRef: eyeglassId });
       }
 
       res.status(200).json({
-        message: "Eyeglass updated successfully",
+        message: "Eyeglass and associated product updated successfully",
         eyeglass: updatedEyeglass,
         product: updatedProduct,
       });
-    } catch (error) {
+      
+    } catch (error: any) {
+      if (error.name === 'ValidationError') {
+        res.status(400).json({ message: "Validation failed", details: error.message });
+        return;
+      }
       console.error("Error updating eyeglass:", error);
       res.status(500).json({ message: "Internal server error" });
     }
