@@ -123,7 +123,12 @@ class WishlistController {
 
       // Get wishlist items with populated product details
       const wishlistItems = await Wishlist.find(query)
-        .populate("productId")
+        .populate({
+          path: 'productId',
+          populate: {
+            path:'lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef',
+          }
+        })
         .sort(sortObj)
         .skip(Number(skip))
         .limit(Number(take));
