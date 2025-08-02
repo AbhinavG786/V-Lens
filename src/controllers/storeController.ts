@@ -3,10 +3,19 @@ import Store from "../models/storeModel";
 
 class StoreController {
   findNearby = async (req: express.Request, res: express.Response) => {
+  try {
     const { lat, lng, radius = 5000 } = req.query;
-    if (!lat || !lng) {
-      res.status(400).json({ error: "Provide lat and lng" });
-      return;
+
+    const parsedLat = parseFloat(lat as string);
+    const parsedLng = parseFloat(lng as string);
+    const parsedRadius = parseInt(radius as string);
+
+    if (
+      isNaN(parsedLat) ||
+      isNaN(parsedLng) ||
+      isNaN(parsedRadius)
+    ) {
+      return res.status(400).json({ error: "Invalid lat, lng, or radius" });
     }
 
     const nearby = await Store.find({
@@ -14,15 +23,19 @@ class StoreController {
         $nearSphere: {
           $geometry: {
             type: "Point",
-            coordinates: [parseFloat(lng as string), parseFloat(lat as string)],
+            coordinates: [parsedLng, parsedLat], // [lng, lat]
           },
-          $maxDistance: parseInt(radius as string),
+          $maxDistance: parsedRadius,
         },
       },
     }).limit(20);
 
-    res.json(nearby);
-  };
+     res.json(nearby);
+  } catch (err) {
+    console.error("Error in findNearby:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
   createStore = async (req: express.Request, res: express.Response) => {
     const { name, address, location } = req.body;
