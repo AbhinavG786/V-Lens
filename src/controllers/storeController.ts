@@ -15,7 +15,8 @@ class StoreController {
       isNaN(parsedLng) ||
       isNaN(parsedRadius)
     ) {
-      return res.status(400).json({ error: "Invalid lat, lng, or radius" });
+       res.status(400).json({ error: "Invalid lat, lng, or radius" });
+       return;
     }
 
     const nearby = await Store.find({
