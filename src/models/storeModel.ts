@@ -4,7 +4,12 @@ const StoreSchema = new Schema({
   name: { type: String, required: true },
   address: { type: String, required: true },
   location: {
-    type: { type: String, default: 'Point' },
+    type: {
+    type: String,
+    enum: ['Point'],
+    default: 'Point',
+    required: true,
+  },
     coordinates: { type: [Number], required: true }, // [lng, lat]
   },
 }, { timestamps: true });
