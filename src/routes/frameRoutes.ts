@@ -6,7 +6,7 @@ import paginationMiddleware from "../middlewares/paginationMiddleware";
 
 const router = Router();
 
-router.post("/create",adminAuth.verifyAdminSession,upload.single("file"), frameController.createFrame);
+router.post("/",adminAuth.verifyAdminSession,upload.single("file"), frameController.createFrame);
 router.get("/all",paginationMiddleware(10,50), frameController.getAllFrames);
 router.get("/:id", frameController.getFrameById);
 router.patch("/:id",adminAuth.verifyAdminSession,upload.single("image"), frameController.updateFrame);
