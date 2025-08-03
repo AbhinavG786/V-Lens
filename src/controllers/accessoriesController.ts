@@ -44,9 +44,13 @@ class AccessoriesController {
       }
 
       const parsedStock: Record<string, number> = JSON.parse(stockByWarehouse);
-      const totalStock = Object.values(parsedStock).reduce((sum, val) => sum + Number(val), 0);
+      const totalStock = Object.values(parsedStock).reduce(
+        (sum, val) => sum + Number(val),
+        0
+      );
 
-      const finalPrice = discount > 0 ? Math.round(price - (price * discount) / 100) : price;
+      const finalPrice =
+        discount > 0 ? Math.round(price - (price * discount) / 100) : price;
 
       const newAccessory = await new Accessories({
         brand,
@@ -72,18 +76,20 @@ class AccessoriesController {
       });
 
       const warehouseMap = new Map<string, mongoose.Types.ObjectId>();
-      warehouses.forEach(w => warehouseMap.set(w.warehouseName, w._id));
+      warehouses.forEach((w) => warehouseMap.set(w.warehouseName, w._id));
 
-      const inventoryItems = Object.entries(parsedStock).map(([warehouseName, stock]) => ({
-        productId: product._id,
-        SKU: `ACC-${Date.now().toString(36).toUpperCase()}-${Math.random()
-          .toString(36)
-          .slice(2, 6)
-          .toUpperCase()}`,
-        stock: Number(stock),
-        threshold,
-        warehouseId: warehouseMap.get(warehouseName),
-      }));
+      const inventoryItems = Object.entries(parsedStock).map(
+        ([warehouseName, stock]) => ({
+          productId: product._id,
+          SKU: `ACC-${Date.now().toString(36).toUpperCase()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)
+            .toUpperCase()}`,
+          stock: Number(stock),
+          threshold,
+          warehouseId: warehouseMap.get(warehouseName),
+        })
+      );
 
       const savedInventory = await Inventory.insertMany(inventoryItems);
 
@@ -103,7 +109,9 @@ class AccessoriesController {
   getAllAccessories = async (req: express.Request, res: express.Response) => {
     const { skip, take } = req.pagination!;
     try {
-      const accessories = await Accessories.find().skip(Number(skip)).limit(Number(take));
+      const accessories = await Accessories.find()
+        .skip(Number(skip))
+        .limit(Number(take));
       const total = await Accessories.countDocuments();
       res.status(200).json({
         data: accessories,
@@ -129,7 +137,10 @@ class AccessoriesController {
     }
   };
 
-  getAccessoriesByBrand = async (req: express.Request, res: express.Response) => {
+  getAccessoriesByBrand = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { brand } = req.query;
     const { skip, take } = req.pagination!;
     try {
@@ -138,7 +149,9 @@ class AccessoriesController {
         .limit(Number(take));
       const total = await Accessories.countDocuments();
       if (accessories.length === 0) {
-        res.status(404).json({ message: "No accessories found for this brand" });
+        res
+          .status(404)
+          .json({ message: "No accessories found for this brand" });
         return;
       }
       res.status(200).json({
@@ -154,7 +167,10 @@ class AccessoriesController {
     }
   };
 
-  updateAccessoriesProduct = async (req: express.Request, res: express.Response) => {
+  updateAccessoriesProduct = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { accessoriesId } = req.params;
     const {
       brand,
@@ -164,7 +180,7 @@ class AccessoriesController {
       discount,
       productName,
       tags,
-      folder = "accessories"
+      folder = "accessories",
     } = req.body;
 
     const folderType = req.body.folder || req.query.folder || "accessories";
@@ -183,7 +199,8 @@ class AccessoriesController {
       if (description) updatedFields.description = description;
 
       if (gender) {
-        const allowedGenders = (Accessories.schema.path("gender") as any).enumValues;
+        const allowedGenders = (Accessories.schema.path("gender") as any)
+          .enumValues;
         if (allowedGenders.includes(gender)) {
           updatedFields.gender = gender;
         } else {
@@ -261,9 +278,6 @@ class AccessoriesController {
     }
   };
 
-
-
-
   deleteAccessories = async (req: express.Request, res: express.Response) => {
     const { accessoriesId } = req.params;
     try {
@@ -276,7 +290,13 @@ class AccessoriesController {
         await cloudinary.uploader.destroy(accessories.imagePublicId);
       }
       await accessories.deleteOne();
-      await Product.findOneAndDelete({ accessoriesRef: accessoriesId });
+      const product = await Product.findOne({ accessoriesRef: accessoriesId });
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+      await product.deleteOne();
+      await Inventory.deleteMany({ productId: product._id });
       res
         .status(204)
         .json({ message: "Accessories and Product deleted successfully" });
@@ -286,7 +306,10 @@ class AccessoriesController {
     }
   };
 
-  getAccessoriesByPriceRange = async (req: express.Request, res: express.Response) => {
+  getAccessoriesByPriceRange = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { minPrice, maxPrice } = req.query;
     const { skip, take } = req.pagination!;
     if (!minPrice || !maxPrice) {

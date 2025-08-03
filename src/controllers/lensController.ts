@@ -48,12 +48,12 @@ class LensController {
       return;
     }
     let parsedStockByWarehouse: Record<string, number> = {};
-      try {
-        parsedStockByWarehouse = JSON.parse(stockByWarehouse);
-      } catch (err) {
-        res.status(400).json({ message: "Invalid stockByWarehouse format" });
-        return;
-      }
+    try {
+      parsedStockByWarehouse = JSON.parse(stockByWarehouse);
+    } catch (err) {
+      res.status(400).json({ message: "Invalid stockByWarehouse format" });
+      return;
+    }
 
     try {
       const uploaded = await uploadBufferToCloudinary(
@@ -447,7 +447,13 @@ class LensController {
         await cloudinary.uploader.destroy(lens.imagePublicId);
       }
       await lens.deleteOne();
-      await Product.findOneAndDelete({ lensRef: lensId });
+      const product = await Product.findOne({ lensRef: lensId });
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+      await product.deleteOne();
+      await Inventory.deleteMany({ productId: product._id });
       res
         .status(204)
         .json({ message: "Lens and Product deleted successfully" });

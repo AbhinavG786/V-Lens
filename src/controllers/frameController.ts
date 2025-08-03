@@ -49,12 +49,12 @@ class FrameController {
     }
 
     let parsedStockByWarehouse: Record<string, number> = {};
-      try {
-        parsedStockByWarehouse = JSON.parse(stockByWarehouse);
-      } catch (err) {
-        res.status(400).json({ message: "Invalid stockByWarehouse format" });
-        return;
-      }
+    try {
+      parsedStockByWarehouse = JSON.parse(stockByWarehouse);
+    } catch (err) {
+      res.status(400).json({ message: "Invalid stockByWarehouse format" });
+      return;
+    }
     try {
       const uploaded = await uploadBufferToCloudinary(
         req.file.buffer,
@@ -191,7 +191,7 @@ class FrameController {
       material,
       color,
       size,
-    //   stock,
+      //   stock,
       price,
       description,
       productName,
@@ -216,26 +216,24 @@ class FrameController {
       if (material) updatedData.material = material;
       if (color) updatedData.color = color;
       if (size) updatedData.size = size;
-    //   if (stock) updatedData.stock = stock;
+      //   if (stock) updatedData.stock = stock;
       if (price) updatedData.price = price;
       if (description) updatedData.description = description;
       if (discount) {
         updatedData.discount = discount;
         updatedData.finalPrice =
           discount > 0
-            ? Math.round(
-                frame.price - (frame.price * discount) / 100
-              )
+            ? Math.round(frame.price - (frame.price * discount) / 100)
             : frame.price;
       }
-     if(gender){
-        const allowedGenders=(Frame.schema.path("gender") as any).enumValues;
+      if (gender) {
+        const allowedGenders = (Frame.schema.path("gender") as any).enumValues;
         if (!allowedGenders.includes(gender)) {
           res.status(400).json({ message: "Invalid gender value" });
           return;
         }
         updatedData.gender = gender;
-     }
+      }
 
       if (req.file) {
         if (frame.imagePublicId) {
@@ -295,8 +293,13 @@ class FrameController {
       }
 
       await frame.deleteOne();
-      await Product.findOneAndDelete({ frameRef: id });
-
+      const product = await Product.findOne({ frameRef: id });
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+      await product.deleteOne();
+      await Inventory.deleteMany({ productId: product._id });
       res
         .status(204)
         .json({ message: "Frame and associated product deleted successfully" });
