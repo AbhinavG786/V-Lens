@@ -26,7 +26,18 @@ class SunglassController {
       tags,
     } = req.body;
 
-    if (!name ||!brand|| !description || !material ||!lensShape || !price || !frameType || !size || !color || !stockByWarehouse) {
+    if (
+      !name ||
+      !brand ||
+      !description ||
+      !material ||
+      !lensShape ||
+      !price ||
+      !frameType ||
+      !size ||
+      !color ||
+      !stockByWarehouse
+    ) {
       res.status(400).json({ message: "Missing required fields" });
       return;
     }
@@ -36,7 +47,7 @@ class SunglassController {
       return;
     }
 
-    try{
+    try {
       const uploaded = await uploadBufferToCloudinary(
         req.file.buffer,
         req.file.originalname,
@@ -49,9 +60,13 @@ class SunglassController {
       }
 
       const parsedStock: Record<string, number> = JSON.parse(stockByWarehouse);
-      const totalStock = Object.values(parsedStock).reduce((sum, val) => sum + Number(val), 0);
+      const totalStock = Object.values(parsedStock).reduce(
+        (sum, val) => sum + Number(val),
+        0
+      );
 
-      const finalPrice = discount > 0 ? Math.round(price - (price * discount) / 100) : price;
+      const finalPrice =
+        discount > 0 ? Math.round(price - (price * discount) / 100) : price;
 
       const newSunglass = await new Sunglass({
         name,
@@ -83,18 +98,20 @@ class SunglassController {
       });
 
       const warehouseMap = new Map<string, mongoose.Types.ObjectId>();
-      warehouses.forEach(w => warehouseMap.set(w.warehouseName, w._id));
+      warehouses.forEach((w) => warehouseMap.set(w.warehouseName, w._id));
 
-      const inventoryItems = Object.entries(parsedStock).map(([warehouseName, stock]) => ({
-        productId: product._id,
-        SKU: `SUN-${Date.now().toString(36).toUpperCase()}-${Math.random()
-          .toString(36)
-          .slice(2, 6)
-          .toUpperCase()}`,
-        stock: Number(stock),
-        threshold,
-        warehouseId: warehouseMap.get(warehouseName),
-      }));
+      const inventoryItems = Object.entries(parsedStock).map(
+        ([warehouseName, stock]) => ({
+          productId: product._id,
+          SKU: `SUN-${Date.now().toString(36).toUpperCase()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)
+            .toUpperCase()}`,
+          stock: Number(stock),
+          threshold,
+          warehouseId: warehouseMap.get(warehouseName),
+        })
+      );
 
       const savedInventory = await Inventory.insertMany(inventoryItems);
 
@@ -110,7 +127,6 @@ class SunglassController {
       return;
     }
   };
-
 
   getAllSunglasses = async (req: express.Request, res: express.Response) => {
     const { skip, take } = req.pagination!;
@@ -214,7 +230,10 @@ class SunglassController {
     }
   };
 
-  updateSunglassProduct = async (req: express.Request, res: express.Response) => {
+  updateSunglassProduct = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { sunglassId } = req.params;
     const {
       name,
@@ -232,7 +251,6 @@ class SunglassController {
     } = req.body;
 
     try {
-      
       const sunglass = await Sunglass.findById(sunglassId);
       if (!sunglass) {
         res.status(404).json({ message: "Sunglass not found" });
@@ -252,7 +270,8 @@ class SunglassController {
 
       if (discount !== undefined || price !== undefined) {
         const basePrice = price !== undefined ? price : sunglass.price;
-        const newDiscount = discount !== undefined ? discount : sunglass.discount;
+        const newDiscount =
+          discount !== undefined ? discount : sunglass.discount;
         updatedFields.discount = newDiscount;
         updatedFields.finalPrice =
           newDiscount > 0
@@ -303,8 +322,10 @@ class SunglassController {
         product: updatedProduct,
       });
     } catch (error: any) {
-      if (error.name === 'ValidationError') {
-        res.status(400).json({ message: "Validation Error", details: error.message });
+      if (error.name === "ValidationError") {
+        res
+          .status(400)
+          .json({ message: "Validation Error", details: error.message });
         return;
       }
       console.error("Error updating sunglass:", error);
@@ -312,7 +333,7 @@ class SunglassController {
     }
   };
 
-    deleteSunglass = async (req: express.Request, res: express.Response) => {
+  deleteSunglass = async (req: express.Request, res: express.Response) => {
     const { sunglassId } = req.params;
     try {
       const sunglass = await Sunglass.findById(sunglassId);
@@ -324,7 +345,24 @@ class SunglassController {
         await cloudinary.uploader.destroy(sunglass.imagePublicId);
       }
       await sunglass.deleteOne();
-      await Product.findOneAndDelete({ sunglassesRef: sunglassId });
+      const product = await Product.findOne({ sunglassesRef: sunglassId });
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+      if (product.tryOn2DImage?.image_public_id_2D) {
+        await cloudinary.uploader.destroy(
+          product.tryOn2DImage.image_public_id_2D
+        );
+      }
+      if (product.tryOn3DModel?.objUrl_publicId) {
+        await cloudinary.uploader.destroy(product.tryOn3DModel.objUrl_publicId);
+      }
+      if (product.tryOn3DModel?.mtlUrl_publicId) {
+        await cloudinary.uploader.destroy(product.tryOn3DModel.mtlUrl_publicId);
+      }
+      await product.deleteOne();
+      await Inventory.deleteMany({ productId: product._id });
       res
         .status(204)
         .json({ message: "Sunglass and Product deleted successfully" });
@@ -333,7 +371,6 @@ class SunglassController {
       res.status(500).json({ message: "Internal server error" });
     }
   };
-
 
   getSunglassesByPriceRange = async (
     req: express.Request,

@@ -64,11 +64,14 @@ const productSchema = new Schema(
       ],
     },
     tryOn2DImage: {
-      type: String, // URL of 2D image
+      image_url_2D: { type: String }, // URL of 2D image
+      image_public_id_2D: { type: String }, // Public ID for 2D image
     },
     tryOn3DModel: {
       objUrl: { type: String }, // URL to .obj file
+      objUrl_publicId: { type: String }, // Public ID for .obj file
       mtlUrl: { type: String }, // URL to .mtl file
+      mtlUrl_publicId: { type: String }, // Public ID for .mtl file
     },
     // tryOn3DModel: {
     //   type: String, // URL to the 3D model file

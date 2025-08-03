@@ -1,6 +1,7 @@
 import { Product } from "../models/productModel";
 import { Request, Response } from "express";
 import express from "express";
+import cloudinary from "../utils/cloudinary";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import { SortOrder } from "mongoose";
 
@@ -32,7 +33,9 @@ class ProductController {
         .skip(skip)
         .limit(take)
         .populate("ratings.reviews")
-        .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
+        .populate(
+          "lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef"
+        );
 
       const total = await Product.countDocuments();
 
@@ -65,7 +68,9 @@ class ProductController {
       const products = await Product.find()
         .skip(safeSkip)
         .limit(take)
-        .populate("lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef");
+        .populate(
+          "lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef"
+        );
 
       res.status(200).json({
         success: true,
@@ -113,8 +118,8 @@ class ProductController {
         "lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef"
       );
       if (!product) {
-         res.status(404).json({ message: "Product not found" });
-         return
+        res.status(404).json({ message: "Product not found" });
+        return;
       }
       res
         .status(200)
@@ -178,54 +183,156 @@ class ProductController {
     }
   };
 
-  upload2dTryOnImage=async(req: Request, res: Response) => {
-    const {productId}=req.params;
-    if(!productId){
-      res.status(400).json({message:"Product ID is required"});
+  upload2dTryOnImage = async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    if (!productId) {
+      res.status(400).json({ message: "Product ID is required" });
       return;
     }
-    if(!req.file){
-      res.status(400).json({message:"Image file is required"});
+    if (!req.file) {
+      res.status(400).json({ message: "Image file is required" });
       return;
     }
-    try{
+    try {
       const product = await Product.findById(productId);
-      if(!product){
-        res.status(404).json({message:"Product not found"});
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
         return;
       }
       let folderType = "";
-      if(!product.type){
-        res.status(400).json({message:"Product type is required"});
+      if (!product.type) {
+        res.status(400).json({ message: "Product type is required" });
         return;
       }
-      if(product.type==="eyeglasses"){
-         folderType="2d-try-on/eyeglasses";
+      if (product.type === "eyeglasses") {
+        folderType = "2d-try-on/eyeglasses";
+      } else if (product.type === "sunglasses") {
+        folderType = "2d-try-on/sunglasses";
+      } else {
+        folderType = "2d-try-on/others";
       }
-      else if(product.type==="sunglasses"){
-         folderType="2d-try-on/sunglasses";
-      }
-      else{
-         folderType="2d-try-on/others";
-      }
-      const uploaded=await uploadBufferToCloudinary(req.file.buffer,req.file.originalname,folderType);
-      if(!uploaded){
-        res.status(500).json({message:"Failed to upload image"});
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        folderType
+      );
+      if (!uploaded) {
+        res.status(500).json({ message: "Failed to upload image" });
         return;
       }
-      product.tryOn2DImage = uploaded.secure_url;
+      if (product.tryOn2DImage && product.tryOn2DImage.image_public_id_2D) {
+        await cloudinary.uploader.destroy(
+          product.tryOn2DImage.image_public_id_2D
+        );
+      }
+      product.tryOn2DImage = {
+        image_url_2D: uploaded.secure_url,
+        image_public_id_2D: uploaded.public_id,
+      };
       await product.save();
       res.status(200).json({
         message: "2D try-on image uploaded successfully",
-        imageUrl: product.tryOn2DImage
+        imageUrl: product.tryOn2DImage.image_url_2D,
+        imagePublicId: product.tryOn2DImage.image_public_id_2D,
       });
-    }
-    catch(error){
+    } catch (error) {
       console.error("Error uploading 2D try-on image:", error);
-      res.status(500).json({message:"Internal server error",error});
+      res.status(500).json({ message: "Internal server error", error });
       return;
     }
-  }
+  };
+
+  upload3dTryOnFiles = async (req: Request, res: Response) => {
+    const { productId } = req.params;
+
+    if (!productId) {
+      res.status(400).json({ message: "Product ID is required" });
+      return;
+    }
+
+    if (!req.files || !Array.isArray(req.files)) {
+      res.status(400).json({ message: "3D files are required" });
+      return;
+    }
+
+    const objFile = req.files.find((file: any) =>
+      file.originalname.endsWith(".obj")
+    );
+    const mtlFile = req.files.find((file: any) =>
+      file.originalname.endsWith(".mtl")
+    );
+
+    if (!objFile || !mtlFile) {
+      res
+        .status(400)
+        .json({ message: ".obj and .mtl files are both required" });
+      return;
+    }
+
+    try {
+      const product = await Product.findById(productId);
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+
+      if (!product.type) {
+        res.status(400).json({ message: "Product type is required" });
+        return;
+      }
+
+      let folderType = "";
+      if (product.type === "eyeglasses") {
+        folderType = "3d-try-on/eyeglasses";
+      } else if (product.type === "sunglasses") {
+        folderType = "3d-try-on/sunglasses";
+      } else {
+        folderType = "3d-try-on/others";
+      }
+
+      if (product.tryOn3DModel?.objUrl_publicId) {
+        await cloudinary.uploader.destroy(product.tryOn3DModel.objUrl_publicId);
+      }
+      if (product.tryOn3DModel?.mtlUrl_publicId) {
+        await cloudinary.uploader.destroy(product.tryOn3DModel.mtlUrl_publicId);
+      }
+
+      const [uploadedObj, uploadedMtl] = await Promise.all([
+        uploadBufferToCloudinary(
+          objFile.buffer,
+          objFile.originalname,
+          folderType
+        ),
+        uploadBufferToCloudinary(
+          mtlFile.buffer,
+          mtlFile.originalname,
+          folderType
+        ),
+      ]);
+
+      if (!uploadedObj || !uploadedMtl) {
+        res.status(500).json({ message: "Failed to upload 3D files" });
+        return;
+      }
+
+      product.tryOn3DModel = {
+        objUrl: uploadedObj.secure_url,
+        objUrl_publicId: uploadedObj.public_id,
+        mtlUrl: uploadedMtl.secure_url,
+        mtlUrl_publicId: uploadedMtl.public_id,
+      };
+
+      await product.save();
+
+      res.status(200).json({
+        message: "3D try-on files uploaded successfully",
+        model: product.tryOn3DModel,
+      });
+    } catch (error) {
+      console.error("Error uploading 3D try-on files:", error);
+      res.status(500).json({ message: "Internal server error", error });
+    }
+  };
 
   // getProductsByFinalPriceRange = async (req: Request, res: Response) => {
   //   const { minPrice, maxPrice, type } = req.query;

@@ -25,8 +25,17 @@ class EyeglassController {
       tags,
     } = req.body;
 
-    if (!modelName || !brand || !frameType || !price || !stockByWarehouse || !req.file) {
-      res.status(400).json({ message: "Missing required fields or image file" });
+    if (
+      !modelName ||
+      !brand ||
+      !frameType ||
+      !price ||
+      !stockByWarehouse ||
+      !req.file
+    ) {
+      res
+        .status(400)
+        .json({ message: "Missing required fields or image file" });
       return;
     }
 
@@ -41,8 +50,12 @@ class EyeglassController {
       }
 
       const parsedStock: Record<string, number> = JSON.parse(stockByWarehouse);
-      const totalStock = Object.values(parsedStock).reduce((sum, val) => sum + Number(val), 0);
-      const finalPrice = discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
+      const totalStock = Object.values(parsedStock).reduce(
+        (sum, val) => sum + Number(val),
+        0
+      );
+      const finalPrice =
+        discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
 
       const eyeglass = new EyeglassModel({
         modelName,
@@ -74,31 +87,36 @@ class EyeglassController {
         warehouseName: { $in: Object.keys(parsedStock) },
       });
 
-      const warehouseMap = new Map(warehouses.map(w => [w.warehouseName, w._id]));
+      const warehouseMap = new Map(
+        warehouses.map((w) => [w.warehouseName, w._id])
+      );
 
-      const inventoryItems = Object.entries(parsedStock).map(([warehouseName, stock]) => ({
-        productId: newProduct._id,
-        SKU: `EYE-${Date.now().toString(36).toUpperCase()}-${Math.random()
-          .toString(36)
-          .slice(2, 6)
-          .toUpperCase()}`,
-        stock: Number(stock),
-        threshold,
-        warehouseId: warehouseMap.get(warehouseName),
-      }));
+      const inventoryItems = Object.entries(parsedStock).map(
+        ([warehouseName, stock]) => ({
+          productId: newProduct._id,
+          SKU: `EYE-${Date.now().toString(36).toUpperCase()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)
+            .toUpperCase()}`,
+          stock: Number(stock),
+          threshold,
+          warehouseId: warehouseMap.get(warehouseName),
+        })
+      );
       const savedInventory = await Inventory.insertMany(inventoryItems);
 
       res.status(201).json({
-        message: "Eyeglass created successfully with product and inventory records.",
+        message:
+          "Eyeglass created successfully with product and inventory records.",
         eyeglass: newEyeglass,
         product: newProduct,
         inventory: savedInventory,
       });
-
     } catch (error: any) {
-      
-      if (error.name === 'ValidationError') {
-        res.status(400).json({ message: "Validation Error", details: error.message });
+      if (error.name === "ValidationError") {
+        res
+          .status(400)
+          .json({ message: "Validation Error", details: error.message });
         return;
       }
       console.error("Error creating eyeglass:", error);
@@ -110,7 +128,9 @@ class EyeglassController {
   getAllEyeglasses = async (req: express.Request, res: express.Response) => {
     const { skip, take } = req.pagination!;
     try {
-      const eyeglasses = await EyeglassModel.find().skip(Number(skip)).limit(Number(take));
+      const eyeglasses = await EyeglassModel.find()
+        .skip(Number(skip))
+        .limit(Number(take));
       const total = await EyeglassModel.countDocuments();
       res.status(200).json({
         data: eyeglasses,
@@ -161,23 +181,31 @@ class EyeglassController {
     }
   };
 
-  getEyeglassByFrameType = async (req: express.Request, res: express.Response) => {
+  getEyeglassByFrameType = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { frameType } = req.query;
     const { skip, take } = req.pagination!;
     if (!frameType) {
       res.status(400).json({ message: "Frame type is required" });
       return;
     }
-    
-    const allowedFrameTypes = (EyeglassModel.schema.path("frameType") as any).enumValues;
+
+    const allowedFrameTypes = (EyeglassModel.schema.path("frameType") as any)
+      .enumValues;
     if (allowedFrameTypes.includes(frameType)) {
       try {
         const eyeglasses = await EyeglassModel.find({ frameType: frameType })
           .skip(Number(skip))
           .limit(Number(take));
-        const total = await EyeglassModel.countDocuments({ frameType: frameType });
+        const total = await EyeglassModel.countDocuments({
+          frameType: frameType,
+        });
         if (eyeglasses.length === 0) {
-          res.status(404).json({ message: "No eyeglasses found for this frame type" });
+          res
+            .status(404)
+            .json({ message: "No eyeglasses found for this frame type" });
           return;
         }
         res.status(200).json({
@@ -197,23 +225,31 @@ class EyeglassController {
     }
   };
 
-  getEyeglassByFrameShape = async (req: express.Request, res: express.Response) => {
+  getEyeglassByFrameShape = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { frameShape } = req.query;
     const { skip, take } = req.pagination!;
     if (!frameShape) {
       res.status(400).json({ message: "Frame shape is required" });
       return;
     }
-    
-    const allowedFrameShapes = (EyeglassModel.schema.path("frameShape") as any).enumValues;
+
+    const allowedFrameShapes = (EyeglassModel.schema.path("frameShape") as any)
+      .enumValues;
     if (allowedFrameShapes.includes(frameShape)) {
       try {
         const eyeglasses = await EyeglassModel.find({ frameShape: frameShape })
           .skip(Number(skip))
           .limit(Number(take));
-        const total = await EyeglassModel.countDocuments({ frameShape: frameShape });
+        const total = await EyeglassModel.countDocuments({
+          frameShape: frameShape,
+        });
         if (eyeglasses.length === 0) {
-          res.status(404).json({ message: "No eyeglasses found for this frame shape" });
+          res
+            .status(404)
+            .json({ message: "No eyeglasses found for this frame shape" });
           return;
         }
         res.status(200).json({
@@ -240,8 +276,9 @@ class EyeglassController {
       res.status(400).json({ message: "Gender is required" });
       return;
     }
-    
-    const allowedGenders = (EyeglassModel.schema.path("gender") as any).enumValues;
+
+    const allowedGenders = (EyeglassModel.schema.path("gender") as any)
+      .enumValues;
     if (allowedGenders.includes(gender)) {
       try {
         const eyeglasses = await EyeglassModel.find({ gender: gender })
@@ -249,7 +286,9 @@ class EyeglassController {
           .limit(Number(take));
         const total = await EyeglassModel.countDocuments({ gender: gender });
         if (eyeglasses.length === 0) {
-          res.status(404).json({ message: "No eyeglasses found for this gender" });
+          res
+            .status(404)
+            .json({ message: "No eyeglasses found for this gender" });
           return;
         }
         res.status(200).json({
@@ -269,7 +308,10 @@ class EyeglassController {
     }
   };
 
-  updateEyeglassProduct = async (req: express.Request, res: express.Response) => {
+  updateEyeglassProduct = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { eyeglassId } = req.params;
     console.log("ID received:", eyeglassId);
     console.log("Querying collection:", EyeglassModel.collection.name);
@@ -311,7 +353,8 @@ class EyeglassController {
 
       if (discount !== undefined || price !== undefined) {
         const basePrice = price !== undefined ? price : eyeglass.price;
-        const newDiscount = discount !== undefined ? discount : eyeglass.discount;
+        const newDiscount =
+          discount !== undefined ? discount : eyeglass.discount;
         updatedFields.discount = newDiscount;
         updatedFields.finalPrice =
           newDiscount > 0
@@ -341,11 +384,11 @@ class EyeglassController {
       const updatedProductData: any = {};
       if (modelName) updatedProductData.name = modelName;
       if (tags) updatedProductData.tags = tags;
-      
+
       let updatedProduct;
       if (Object.keys(updatedProductData).length > 0) {
         updatedProduct = await Product.findOneAndUpdate(
-          { eyeglassesRef: eyeglassId }, 
+          { eyeglassesRef: eyeglassId },
           { $set: updatedProductData },
           { new: true }
         );
@@ -358,10 +401,11 @@ class EyeglassController {
         eyeglass: updatedEyeglass,
         product: updatedProduct,
       });
-      
     } catch (error: any) {
-      if (error.name === 'ValidationError') {
-        res.status(400).json({ message: "Validation failed", details: error.message });
+      if (error.name === "ValidationError") {
+        res
+          .status(400)
+          .json({ message: "Validation failed", details: error.message });
         return;
       }
       console.error("Error updating eyeglass:", error);
@@ -381,7 +425,24 @@ class EyeglassController {
         await cloudinary.uploader.destroy(eyeglass.imagePublicId);
       }
       await eyeglass.deleteOne();
-      await Product.findOneAndDelete({ eyeglassRef: eyeglassId });
+      const product = await Product.findOne({ eyeglassesRef: eyeglassId });
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+      if (product.tryOn2DImage?.image_public_id_2D) {
+        await cloudinary.uploader.destroy(
+          product.tryOn2DImage.image_public_id_2D
+        );
+      }
+      if (product.tryOn3DModel?.objUrl_publicId) {
+        await cloudinary.uploader.destroy(product.tryOn3DModel.objUrl_publicId);
+      }
+      if (product.tryOn3DModel?.mtlUrl_publicId) {
+        await cloudinary.uploader.destroy(product.tryOn3DModel.mtlUrl_publicId);
+      }
+      await product.deleteOne();
+      await Inventory.deleteMany({ productId: product._id });
       res
         .status(204)
         .json({ message: "Eyeglass and Product deleted successfully" });
@@ -391,7 +452,10 @@ class EyeglassController {
     }
   };
 
-  getEyeglassByPriceRange = async (req: express.Request, res: express.Response) => {
+  getEyeglassByPriceRange = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { minPrice, maxPrice } = req.query;
     const { skip, take } = req.pagination!;
     if (!minPrice || !maxPrice) {
