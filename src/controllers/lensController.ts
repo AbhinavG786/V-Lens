@@ -67,7 +67,7 @@ class LensController {
         return;
       }
 
-      const totalStock = Object.values(stockByWarehouse).reduce(
+      const totalStock = Object.values(parsedStockByWarehouse).reduce(
         (sum: number, qty) => sum + Number(qty),
         0
       );
