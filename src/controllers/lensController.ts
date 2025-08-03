@@ -47,6 +47,13 @@ class LensController {
       res.status(400).json({ message: "Image file is required" });
       return;
     }
+    let parsedStockByWarehouse: Record<string, number> = {};
+      try {
+        parsedStockByWarehouse = JSON.parse(stockByWarehouse);
+      } catch (err) {
+        res.status(400).json({ message: "Invalid stockByWarehouse format" });
+        return;
+      }
 
     try {
       const uploaded = await uploadBufferToCloudinary(
@@ -88,14 +95,6 @@ class LensController {
         lensRef: savedLens._id,
       });
       const savedProduct = await newProduct.save();
-
-      let parsedStockByWarehouse: Record<string, number> = {};
-      try {
-        parsedStockByWarehouse = JSON.parse(stockByWarehouse);
-      } catch (err) {
-        res.status(400).json({ message: "Invalid stockByWarehouse format" });
-        return;
-      }
 
       const warehouseNames = Object.keys(parsedStockByWarehouse);
 
