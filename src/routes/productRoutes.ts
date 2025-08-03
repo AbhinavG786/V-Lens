@@ -1,6 +1,7 @@
 import product from "../controllers/productController"
 import { Router } from "express";
 import paginationMiddleware from "../middlewares/paginationMiddleware";
+import adminAuth from "../middlewares/adminAuth";
 
 const router= Router();
 
@@ -9,6 +10,7 @@ router.route("/random").get(paginationMiddleware(10,50),product.getRandomProduct
 router.route("/trending").get(paginationMiddleware(10,50),product.getTrendingProducts);
 router.route("/get/:productId").get(product.getProductById);
 router.route("/productType").get(paginationMiddleware(10,50),product.getAllProductsByType);
+router.route("/2d-try-on/:productId").post(adminAuth.verifyAdminSession,product.upload2dTryOnImage)
 
 // router.route("/priceRange").get(paginationMiddleware(10,50),product.getProductsByFinalPriceRange);
 // router.route("/create").post(product.createProduct);

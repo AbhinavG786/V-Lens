@@ -1,6 +1,7 @@
 import { Product } from "../models/productModel";
 import { Request, Response } from "express";
 import express from "express";
+import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import { SortOrder } from "mongoose";
 
 class ProductController {
@@ -176,6 +177,55 @@ class ProductController {
       res.status(500).json({ message: "Error fetching products", error });
     }
   };
+
+  upload2dTryOnImage=async(req: Request, res: Response) => {
+    const {productId}=req.params;
+    if(!productId){
+      res.status(400).json({message:"Product ID is required"});
+      return;
+    }
+    if(!req.file){
+      res.status(400).json({message:"Image file is required"});
+      return;
+    }
+    try{
+      const product = await Product.findById(productId);
+      if(!product){
+        res.status(404).json({message:"Product not found"});
+        return;
+      }
+      let folderType = "";
+      if(!product.type){
+        res.status(400).json({message:"Product type is required"});
+        return;
+      }
+      if(product.type==="eyeglasses"){
+         folderType="2d-try-on/eyeglasses";
+      }
+      else if(product.type==="sunglasses"){
+         folderType="2d-try-on/sunglasses";
+      }
+      else{
+         folderType="2d-try-on/others";
+      }
+      const uploaded=await uploadBufferToCloudinary(req.file.buffer,req.file.originalname,folderType);
+      if(!uploaded){
+        res.status(500).json({message:"Failed to upload image"});
+        return;
+      }
+      product.tryOn2DImage = uploaded.secure_url;
+      await product.save();
+      res.status(200).json({
+        message: "2D try-on image uploaded successfully",
+        imageUrl: product.tryOn2DImage
+      });
+    }
+    catch(error){
+      console.error("Error uploading 2D try-on image:", error);
+      res.status(500).json({message:"Internal server error",error});
+      return;
+    }
+  }
 
   // getProductsByFinalPriceRange = async (req: Request, res: Response) => {
   //   const { minPrice, maxPrice, type } = req.query;

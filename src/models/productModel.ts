@@ -5,7 +5,7 @@ const productSchema = new Schema(
     type: {
       type: String,
       required: true,
-      enum: ["eyeglasses", "sunglasses", "lenses", "accessories","frames"],
+      enum: ["eyeglasses", "sunglasses", "lenses", "accessories", "frames"],
     },
     name: {
       type: String,
@@ -58,10 +58,17 @@ const productSchema = new Schema(
         //   createdAt: { type: Date, default: Date.now },
         // },
         {
-        type: Schema.Types.ObjectId,
-        ref:"Review",
-        }
+          type: Schema.Types.ObjectId,
+          ref: "Review",
+        },
       ],
+    },
+    tryOn2DImage: {
+      type: String, // URL of 2D image
+    },
+    tryOn3DModel: {
+      objUrl: { type: String }, // URL to .obj file
+      mtlUrl: { type: String }, // URL to .mtl file
     },
     // tryOn3DModel: {
     //   type: String, // URL to the 3D model file
@@ -71,7 +78,7 @@ const productSchema = new Schema(
     //   enum: ["men", "women", "unisex"],
     //   default: "unisex",
     // },
-    lensRef:{
+    lensRef: {
       type: Schema.Types.ObjectId,
       ref: "Lens",
     },
@@ -90,7 +97,7 @@ const productSchema = new Schema(
     eyeglassesRef: {
       type: Schema.Types.ObjectId,
       ref: "Eyeglasses",
-    }
+    },
     // frameShape: {
     //   type: String,
     // },
