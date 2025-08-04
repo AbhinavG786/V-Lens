@@ -11,7 +11,7 @@ class AgentController {
       return;
     }
     try {
-      const user = await User.findOne({ firebaseUID, isAdmin: true });
+      const user = await User.findOne({ firebaseUID, isAgent: true });
       if (!user) {
         res.status(404).json({ error: "User not found" });
         return;
