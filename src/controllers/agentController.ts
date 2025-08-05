@@ -115,6 +115,25 @@ class AgentController {
       res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  getAgentLiveAvailabilityStatus = async (req: express.Request, res: express.Response) => {
+    const { agentId } = req.params;
+    if (!agentId) {
+      res.status(400).json({ error: "Agent ID is required" });
+      return;
+    }
+    try {
+      const agent = await User.findById(agentId);
+      if (!agent || !agent.isAgent) {
+        res.status(404).json({ error: "Agent not found" });
+        return;
+      }
+      res.status(200).json({ isAvailable: agent.isAvailable });
+    } catch (error) {
+      console.error("Error fetching agent availability status:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
 }
 
 export default new AgentController();

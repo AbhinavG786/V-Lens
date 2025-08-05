@@ -106,7 +106,8 @@ class ProductController {
         take: Number(take),
         totalPages: Math.ceil(total / Number(take)),
       });
-    } catch (error) {
+    } catch (error:any) {
+      console.error("Error fetching all products:", error.message);
       res.status(500).json({ message: "Error fetching all products", error });
     }
   };

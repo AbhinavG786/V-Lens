@@ -99,7 +99,7 @@ const productSchema = new Schema(
     },
     eyeglassesRef: {
       type: Schema.Types.ObjectId,
-      ref: "Eyeglasses",
+      ref: "EyeglassModel",
     },
     // frameShape: {
     //   type: String,
