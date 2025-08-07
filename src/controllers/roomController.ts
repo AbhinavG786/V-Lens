@@ -79,7 +79,7 @@ class RoomController {
         });
       }
       // await User.findByIdAndUpdate(agentId, { $inc: { currentLoad: 1 } });
-      if (agent.currentLoad + 1 >= agent.maxLoad) {
+      if (agent.currentLoad >= agent.maxLoad) {
         await User.findByIdAndUpdate(agentId, { isAvailable: false });
       }
       res.status(200).json(room);
