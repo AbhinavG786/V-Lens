@@ -1,5 +1,6 @@
 import { User } from "../models/userModel";
 import express from "express";
+import admin from "../firebase/firebaseInit";
 
 class AdminController {
   getAllUsers = async (req: express.Request, res: express.Response) => {
@@ -80,11 +81,18 @@ class AdminController {
       return;
     }
     try {
-      const deletedUser = await User.findByIdAndDelete(userId);
-      if (!deletedUser) {
+      const user = await User.findById(userId);
+      if (!user) {
         res.status(404).json({ message: "User not found" });
         return;
       }
+      const firebaseUID = user?.firebaseUID;
+      if (!firebaseUID) {
+        res.status(404).json({ message: "FirebaseUID not found" });
+        return;
+      }
+      await admin.auth().deleteUser(firebaseUID);
+      await user.deleteOne();
       res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting user", error });

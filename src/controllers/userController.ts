@@ -2,6 +2,7 @@ import { User } from "../models/userModel";
 import express from "express";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import cloudinary from "../utils/cloudinary";
+import admin from "../firebase/firebaseInit"
 
 class UserController {
   getUserProfile = async (req: express.Request, res: express.Response) => {
@@ -91,6 +92,7 @@ class UserController {
         res.status(404).json({ message: "User not found" });
         return;
       }
+       await admin.auth().deleteUser(firebaseUID);
       res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting user", error });
