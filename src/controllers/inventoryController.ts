@@ -249,7 +249,7 @@ class InventoryController {
         },
       ]);
       const stockByType = result.reduce((acc, item) => {
-        acc[item._id] = item.totalStock;
+        acc[item.type] = item.totalStock;
         return acc;
       }, {} as Record<string, number>);
 
