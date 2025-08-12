@@ -37,6 +37,13 @@ class OrderController {
       // Calculate order totals
       let totalAmount = 0;
       let discountAmount = 0;
+       const typeToRefMap: Record<string, string> = {
+          lenses: "lensRef",
+          frames: "frameRef",
+          accessories: "accessoriesRef",
+          sunglasses: "sunglassesRef",
+          eyeglasses: "eyeglassesRef",
+        };
 
       for (const item of items) {
         const product = await Product.findById(item.productId);
@@ -51,14 +58,6 @@ class OrderController {
         //   ? populatedProduct.lensRef.price
         //   : product.finalPrice;
         // const itemDiscount = (lensPrice - product.finalPrice) * item.quantity;
-
-        const typeToRefMap: Record<string, string> = {
-          lenses: "lensRef",
-          frames: "frameRef",
-          accessories: "accessoriesRef",
-          sunglasses: "sunglassesRef",
-          eyeglasses: "eyeglassesRef",
-        };
 
         const refField = typeToRefMap[product.type];
         if (refField) {

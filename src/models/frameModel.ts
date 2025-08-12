@@ -14,6 +14,11 @@ const frameSchema = new Schema(
       type: Number,
       required: true,
     },
+    frameType: {
+      type: String,
+      enum: ["full-rim", "half-rim", "rimless"],
+      required: true,
+    },
     shape: {
       type: String,
       required: true,

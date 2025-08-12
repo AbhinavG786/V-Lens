@@ -29,6 +29,9 @@ class EyeglassController {
       !modelName ||
       !brand ||
       !frameType ||
+      !frameShape ||
+      !frameMaterial ||
+      !frameColor ||
       !price ||
       !stockByWarehouse ||
       !req.file
@@ -37,6 +40,20 @@ class EyeglassController {
         .status(400)
         .json({ message: "Missing required fields or image file" });
       return;
+    }
+if (gender) {
+      const allowedGenders = (EyeglassModel.schema.path("gender") as any).enumValues;
+      if (!allowedGenders.includes(gender)) {
+        res.status(400).json({ message: "Invalid gender value" });
+        return;
+      }
+    }
+    if(frameType){
+      const allowedFrameTypes = (EyeglassModel.schema.path("frameType") as any).enumValues;
+      if (!allowedFrameTypes.includes(frameType)) {
+        res.status(400).json({ message: "Invalid frameType value" });
+        return;
+      }
     }
 
     try {

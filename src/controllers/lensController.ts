@@ -43,6 +43,14 @@ class LensController {
       res.status(400).json({ message: "All fields are required" });
       return;
     }
+    if(gender)
+    {
+      const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
+      if (!allowedGenders.includes(gender)) {
+        res.status(400).json({ message: "Invalid gender value" });
+        return;
+      }
+    }
     if (!req.file) {
       res.status(400).json({ message: "Image file is required" });
       return;

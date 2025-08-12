@@ -12,6 +12,7 @@ class FrameController {
     const {
       brand,
       shape,
+      frameType,
       material,
       color,
       size,
@@ -32,6 +33,7 @@ class FrameController {
     if (
       !brand ||
       !shape ||
+      !frameType ||
       !material ||
       !color ||
       !size ||
@@ -42,7 +44,20 @@ class FrameController {
       res.status(400).json({ message: "Missing required fields" });
       return;
     }
-
+    if (gender) {
+      const allowedGenders = (Frame.schema.path("gender") as any).enumValues;
+      if (!allowedGenders.includes(gender)) {
+        res.status(400).json({ message: "Invalid gender value" });
+        return;
+      }
+    }
+    if(frameType){
+      const allowedFrameTypes = (Frame.schema.path("frameType") as any).enumValues;
+      if (!allowedFrameTypes.includes(frameType)) {
+        res.status(400).json({ message: "Invalid frameType value" });
+        return;
+      }
+    }
     if (!req.file) {
       res.status(400).json({ message: "Image file is required" });
       return;
@@ -75,6 +90,7 @@ class FrameController {
       const frame = await Frame.create({
         brand,
         shape,
+        frameType,
         material,
         color,
         size,
@@ -188,6 +204,7 @@ class FrameController {
     const {
       brand,
       shape,
+      frameType,
       material,
       color,
       size,
@@ -234,6 +251,15 @@ class FrameController {
         }
         updatedData.gender = gender;
       }
+       if (frameType) {
+        const allowedFrameTypes = (Frame.schema.path("frameType") as any).enumValues;
+        if (!allowedFrameTypes.includes(frameType)) {
+          res.status(400).json({ message: "Invalid frameType value" });
+          return;
+        }
+        updatedData.frameType = frameType;
+      }
+      
 
       if (req.file) {
         if (frame.imagePublicId) {

@@ -46,6 +46,20 @@ class SunglassController {
       res.status(400).json({ message: "Image file is required" });
       return;
     }
+    if (gender) {
+          const allowedGenders = (Sunglass.schema.path("gender") as any).enumValues;
+          if (!allowedGenders.includes(gender)) {
+            res.status(400).json({ message: "Invalid gender value" });
+            return;
+          }
+        }
+        if(frameType){
+          const allowedFrameTypes = (Sunglass.schema.path("frameType") as any).enumValues;
+          if (!allowedFrameTypes.includes(frameType)) {
+            res.status(400).json({ message: "Invalid frameType value" });
+            return;
+          }
+        }
 
     try {
       const uploaded = await uploadBufferToCloudinary(
