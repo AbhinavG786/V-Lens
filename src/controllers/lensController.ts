@@ -43,8 +43,7 @@ class LensController {
       res.status(400).json({ message: "All fields are required" });
       return;
     }
-    if(gender)
-    {
+    if (gender) {
       const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
       if (!allowedGenders.includes(gender)) {
         res.status(400).json({ message: "Invalid gender value" });
@@ -333,51 +332,59 @@ class LensController {
     }
   };
 
-  getLensByFilters=async(req:express.Request,res:express.Response)=>{
-    const {brand,type,color,power,gender} = req.query;
+  getLensByFilters = async (req: express.Request, res: express.Response) => {
+    const { brand, type, color, power, gender, minPrice, maxPrice } = req.query;
     const { skip, take } = req.pagination!;
-   
+
     try {
       const filters: any = {};
       if (brand) filters.brand = brand;
       if (color) filters.color = color;
       if (power) filters.power = power;
-       if(type){
-      const allowedTypes = (Lens.schema.path("type") as any).enumValues;
-      if (allowedTypes.includes(type)) {
-        filters.type = type;
-      } else {
-        res.status(400).json({ message: `Invalid type value.` });
-        return;
+      if (type) {
+        const allowedTypes = (Lens.schema.path("type") as any).enumValues;
+        if (allowedTypes.includes(type)) {
+          filters.type = type;
+        } else {
+          res.status(400).json({ message: `Invalid type value.` });
+          return;
+        }
       }
-    }
-    if(gender){
-      const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
-      if (allowedGenders.includes(gender)) {
-        filters.gender = gender;
-      } else {
-        res.status(400).json({ message: `Invalid gender value.` });
-        return;
+      if (gender) {
+        const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          filters.gender = gender;
+        } else {
+          res.status(400).json({ message: `Invalid gender value.` });
+          return;
+        }
       }
-    }
+      if (minPrice || maxPrice) {
+        filters.finalPrice = {};
+        if (minPrice) filters.finalPrice.$gte = parseFloat(minPrice as string);
+        if (maxPrice) filters.finalPrice.$lte = parseFloat(maxPrice as string);
+      }
 
-      const lenses = await Lens.find(filters)
+      const lenses = await Lens.find(filters);
       if (lenses.length === 0) {
-   res.status(404).json({ message: "No products found for these filters" });
-   return
-}
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      const lensIds = lenses.map((l) => l._id);
 
-      const lensIds = lenses.map(l => l._id);
-
- const [products, total] = await Promise.all([
-      Product.find({ lensRef: { $in: lensIds } })
-        .skip(Number(skip))
-        .limit(Number(take)),
-      Product.countDocuments({ lensRef: { $in: lensIds } })
-    ]);
+      const [products, total] = await Promise.all([
+        Product.find({ lensRef: { $in: lensIds } })
+          .skip(Number(skip))
+          .limit(Number(take)),
+        Product.countDocuments({ lensRef: { $in: lensIds } }),
+      ]);
 
       if (products.length === 0) {
-        res.status(404).json({ message: "No products found for these filters" });
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
         return;
       }
       res.status(200).json({
@@ -391,7 +398,7 @@ class LensController {
       console.error("Error fetching lens products by filters:", error);
       res.status(500).json({ message: "Internal server error" });
     }
-  }
+  };
 
   updateLensProduct = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
@@ -436,14 +443,39 @@ class LensController {
           return;
         }
       }
-      if (discount) {
-        updatedData.discount = discount;
-        updatedData.finalPrice =
-          discount > 0
-            ? Math.round(lens.price - (lens.price * discount) / 100)
-            : lens.price;
-      }
-      if (price) updatedData.price = price;
+      const newPrice = price !== undefined ? price : lens.price;
+      const newDiscount = discount !== undefined ? discount : lens.discount;
+
+      updatedData.price = newPrice;
+      updatedData.discount = newDiscount;
+
+      updatedData.finalPrice =
+        newDiscount > 0
+          ? Math.round(newPrice - (newPrice * newDiscount) / 100)
+          : newPrice;
+      // if (price && !discount) {
+      //   updatedData.price = price;
+      //   updatedData.finalPrice =
+      //     lens.discount > 0
+      //       ? Math.round(price - (price * lens.discount) / 100)
+      //       : price;
+      // }
+      // if (discount) {
+      //   if(price){
+      //     updatedData.discount = discount;
+      //     updatedData.finalPrice =
+      //       discount > 0
+      //         ? Math.round(price - (price * discount) / 100)
+      //         : price;
+      //   }
+      //   else{
+      //   updatedData.discount = discount;
+      //   updatedData.finalPrice =
+      //     discount > 0
+      //       ? Math.round(lens.price - (lens.price * discount) / 100)
+      //       : lens.price;
+      //   }
+      // }
       // if (stock) updatedData.stock = stock;
       if (description) updatedData.description = description;
       if (color) updatedData.color = color;

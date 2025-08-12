@@ -29,6 +29,10 @@ const EyeglassModelSchema = new Schema(
       type: String,
       required: true,
     },
+    frameSize: {
+      type: String,
+      required: true
+    },
     discount: {
       type: Number,
       default: 0,

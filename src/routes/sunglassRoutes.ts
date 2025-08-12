@@ -8,6 +8,7 @@ const router = Router();
 
 router.route("/").post(adminAuth.verifyAdminSession,upload.single('file'),Sunglass.createSunglass);
 router.route("/all").get(paginationMiddleware(10, 50), Sunglass.getAllSunglasses);
+router.route("/filters").get(paginationMiddleware(10, 50), Sunglass.getSunglassesByFilters);
 router.route("/brand").get(paginationMiddleware(10, 50),Sunglass.getSunglassesByBrand);
 router.route("/type").get(paginationMiddleware(10, 50),Sunglass.getSunglassesByFrameType);
 router.route("/priceRange").get(paginationMiddleware(10, 50), Sunglass.getSunglassesByPriceRange);

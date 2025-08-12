@@ -276,22 +276,32 @@ class SunglassController {
       if (frameType) updatedFields.frameType = frameType;
       if (lensShape) updatedFields.lensShape = lensShape;
       if (material) updatedFields.material = material;
-      if (price) updatedFields.price = price;
       if (color) updatedFields.color = color;
       if (description) updatedFields.description = description;
       if (gender) updatedFields.gender = gender;
       if (size) updatedFields.size = size;
+      const newPrice = price !== undefined ? price : sunglass.price;
+      const newDiscount = discount !== undefined ? discount : sunglass.discount;
 
-      if (discount !== undefined || price !== undefined) {
-        const basePrice = price !== undefined ? price : sunglass.price;
-        const newDiscount =
-          discount !== undefined ? discount : sunglass.discount;
-        updatedFields.discount = newDiscount;
-        updatedFields.finalPrice =
-          newDiscount > 0
-            ? Math.round(basePrice - (basePrice * newDiscount) / 100)
-            : basePrice;
-      }
+updatedFields.price = newPrice;
+updatedFields.discount = newDiscount;
+
+updatedFields.finalPrice =
+  newDiscount > 0
+    ? Math.round(newPrice - (newPrice * newDiscount) / 100)
+    : newPrice;
+      
+      // if (price) updatedFields.price = price;
+      // if (discount !== undefined || price !== undefined) {
+      //   const basePrice = price !== undefined ? price : sunglass.price;
+      //   const newDiscount =
+      //     discount !== undefined ? discount : sunglass.discount;
+      //   updatedFields.discount = newDiscount;
+      //   updatedFields.finalPrice =
+      //     newDiscount > 0
+      //       ? Math.round(basePrice - (basePrice * newDiscount) / 100)
+      //       : basePrice;
+      // }
 
       if (req.file) {
         if (sunglass.imagePublicId) {
@@ -504,6 +514,103 @@ class SunglassController {
       res.status(500).json({ message: "Internal server error" });
     }
   };
+
+  getSunglassesByFilters = async (req: express.Request, res: express.Response) => {
+      const {
+        brand,
+        frameType,
+        lensShape,
+        material,
+        color,
+        size,
+        gender,
+        minPrice,
+        maxPrice,
+      } = req.query;
+      const { skip, take } = req.pagination!;
+  
+      try {
+        const filters: any = {};
+        if (brand) filters.brand = brand;
+        if (color) filters.color = color;
+        if (material) filters.material = material;
+        if (size) {
+          const allowedSizes = (Sunglass.schema.path("size") as any).enumValues;
+          if (allowedSizes.includes(size)) {
+            filters.size = size;
+          } else {
+            res.status(400).json({ message: `Invalid size value.` });
+            return;
+          }
+        }
+        if (lensShape) {
+          const allowedShapes = (Sunglass.schema.path("lensShape") as any).enumValues;
+          if (allowedShapes.includes(lensShape)) {
+            filters.lensShape = lensShape;
+          } else {
+            res.status(400).json({ message: `Invalid lensShape value.` });
+            return;
+          }
+        }
+        if (frameType) {
+          const allowedTypes = (Sunglass.schema.path("frameType") as any).enumValues;
+          if (allowedTypes.includes(frameType)) {
+            filters.frameType = frameType;
+          } else {
+            res.status(400).json({ message: `Invalid frameType value.` });
+            return;
+          }
+        }
+        if (gender) {
+          const allowedGenders = (Sunglass.schema.path("gender") as any).enumValues;
+          if (allowedGenders.includes(gender)) {
+            filters.gender = gender;
+          } else {
+            res.status(400).json({ message: `Invalid gender value.` });
+            return;
+          }
+        }
+        if (minPrice || maxPrice) {
+          filters.finalPrice = {};
+          if (minPrice) filters.finalPrice.$gte = parseFloat(minPrice as string);
+          if (maxPrice) filters.finalPrice.$lte = parseFloat(maxPrice as string);
+        }
+
+        const sunglasses = await Sunglass.find(filters);
+        if (sunglasses.length === 0) {
+          res
+            .status(404)
+            .json({ message: "No products found for these filters" });
+          return;
+        }
+        const sunglassIds = sunglasses.map((l) => l._id);
+
+        const [products, total] = await Promise.all([
+          Product.find({ sunglassesRef: { $in: sunglassIds } })
+            .skip(Number(skip))
+            .limit(Number(take)),
+          Product.countDocuments({ sunglassesRef: { $in: sunglassIds } }),
+        ]);
+  
+        if (products.length === 0) {
+          res
+            .status(404)
+            .json({ message: "No products found for these filters" });
+          return;
+        }
+        res.status(200).json({
+          data: products,
+          total,
+          skip: Number(skip),
+          take: Number(take),
+          totalPages: Math.ceil(total / Number(take)),
+        });
+      } catch (error) {
+        console.error("Error fetching sunglass products by filters:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    };
+  
 }
 
 export default new SunglassController();

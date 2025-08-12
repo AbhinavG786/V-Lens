@@ -9,7 +9,8 @@ const AccessoriesSchema = new Schema(
     price: {
       type: Number,
       required: true,
-    }, discount: {
+    },
+    discount: {
       type: Number,
       default: 0,
     },
@@ -28,14 +29,14 @@ const AccessoriesSchema = new Schema(
     },
     description: {
       type: String,
-      required: true, 
+      required: true,
     },
     imageUrl: {
       type: String,
       required: true,
     },
-    imagePublicId:{
-      type:String,
+    imagePublicId: {
+      type: String,
       required: true,
     },
   },
@@ -46,4 +47,7 @@ const AccessoriesSchema = new Schema(
 
 type AccessoriesType = InferSchemaType<typeof AccessoriesSchema>;
 
-export const Accessories = mongoose.model<AccessoriesType>("Accessories", AccessoriesSchema);
+export const Accessories = mongoose.model<AccessoriesType>(
+  "Accessories",
+  AccessoriesSchema
+);

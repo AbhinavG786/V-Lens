@@ -16,6 +16,7 @@ class EyeglassController {
       frameShape,
       frameMaterial,
       frameColor,
+      frameSize,
       price,
       gender,
       description,
@@ -32,6 +33,7 @@ class EyeglassController {
       !frameShape ||
       !frameMaterial ||
       !frameColor ||
+      !frameSize ||
       !price ||
       !stockByWarehouse ||
       !req.file
@@ -41,17 +43,37 @@ class EyeglassController {
         .json({ message: "Missing required fields or image file" });
       return;
     }
-if (gender) {
-      const allowedGenders = (EyeglassModel.schema.path("gender") as any).enumValues;
+    if (gender) {
+      const allowedGenders = (EyeglassModel.schema.path("gender") as any)
+        .enumValues;
       if (!allowedGenders.includes(gender)) {
         res.status(400).json({ message: "Invalid gender value" });
         return;
       }
     }
-    if(frameType){
-      const allowedFrameTypes = (EyeglassModel.schema.path("frameType") as any).enumValues;
+    if (frameType) {
+      const allowedFrameTypes = (EyeglassModel.schema.path("frameType") as any)
+        .enumValues;
       if (!allowedFrameTypes.includes(frameType)) {
         res.status(400).json({ message: "Invalid frameType value" });
+        return;
+      }
+    }
+    if (frameShape) {
+      const allowedFrameShapes = (
+        EyeglassModel.schema.path("frameShape") as any
+      ).enumValues;
+      if (!allowedFrameShapes.includes(frameShape)) {
+        res.status(400).json({ message: "Invalid frameShape value" });
+        return;
+      }
+    }
+    if (frameMaterial) {
+      const allowedFrameMaterials = (
+        EyeglassModel.schema.path("frameMaterial") as any
+      ).enumValues;
+      if (!allowedFrameMaterials.includes(frameMaterial)) {
+        res.status(400).json({ message: "Invalid frameMaterial value" });
         return;
       }
     }
@@ -81,6 +103,7 @@ if (gender) {
         frameShape,
         frameMaterial,
         frameColor,
+        frameSize,
         price,
         gender,
         description,
@@ -325,13 +348,107 @@ if (gender) {
     }
   };
 
+  getEyeglassesByFilters = async (req: express.Request, res: express.Response) => {
+    const {
+      brand,
+      frameType,
+      frameShape,
+      frameMaterial,
+      frameColor,
+      frameSize,
+      gender,
+      minPrice,
+      maxPrice,
+    } = req.query;
+    const { skip, take } = req.pagination!;
+
+    try {
+      const filters: any = {};
+      if (brand) filters.brand = brand;
+      if (frameColor) filters.color = frameColor;
+      if (frameSize) filters.size = frameSize;
+      if (frameShape) {
+        const allowedShapes = (EyeglassModel.schema.path("frameShape") as any).enumValues;
+        if (allowedShapes.includes(frameShape)) {
+          filters.shape = frameShape;
+        } else {
+          res.status(400).json({ message: `Invalid frameShape value.` });
+          return;
+        }
+      }
+      if (frameMaterial) {
+        const allowedMaterials = (EyeglassModel.schema.path("frameMaterial") as any).enumValues;
+        if (allowedMaterials.includes(frameMaterial)) {
+          filters.material = frameMaterial;
+        } else {
+          res.status(400).json({ message: `Invalid frameMaterial value.` });
+          return;
+        }
+      }
+      if (frameType) {
+        const allowedTypes = (EyeglassModel.schema.path("frameType") as any).enumValues;
+        if (allowedTypes.includes(frameType)) {
+          filters.frameType = frameType;
+        } else {
+          res.status(400).json({ message: `Invalid frameType value.` });
+          return;
+        }
+      }
+      if (gender) {
+        const allowedGenders = (EyeglassModel.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          filters.gender = gender;
+        } else {
+          res.status(400).json({ message: `Invalid gender value.` });
+          return;
+        }
+      }
+      if (minPrice || maxPrice) {
+        filters.finalPrice = {};
+        if (minPrice) filters.finalPrice.$gte = parseFloat(minPrice as string);
+        if (maxPrice) filters.finalPrice.$lte = parseFloat(maxPrice as string);
+      }
+
+      const eyeglasses = await EyeglassModel.find(filters);
+      if (eyeglasses.length === 0) {
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      const eyeglassIds = eyeglasses.map((l) => l._id);
+
+      const [products, total] = await Promise.all([
+        Product.find({ eyeglassesRef: { $in: eyeglassIds } })
+          .skip(Number(skip))
+          .limit(Number(take)),
+        Product.countDocuments({ eyeglassesRef: { $in: eyeglassIds } }),
+      ]);
+
+      if (products.length === 0) {
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      res.status(200).json({
+        data: products,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching eyeglass products by filters:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
   updateEyeglassProduct = async (
     req: express.Request,
     res: express.Response
   ) => {
     const { eyeglassId } = req.params;
-    console.log("ID received:", eyeglassId);
-    console.log("Querying collection:", EyeglassModel.collection.name);
     const {
       modelName,
       brand,
@@ -339,17 +456,21 @@ if (gender) {
       frameShape,
       frameMaterial,
       frameColor,
+      frameSize,
       gender,
       price,
       description,
       discount,
-      stock,
       tags,
     } = req.body;
+    if (!eyeglassId) {
+      res.status(400).json({ message: "Eyeglass ID is required" });
+      return;
+    }
 
     try {
       const eyeglass = await EyeglassModel.findById(eyeglassId);
-      console.log("Result from findById:", eyeglass);
+
       if (!eyeglass) {
         res.status(404).json({ message: "Eyeglass not found" });
         return;
@@ -359,25 +480,75 @@ if (gender) {
 
       if (modelName) updatedFields.modelName = modelName;
       if (brand) updatedFields.brand = brand;
-      if (frameType) updatedFields.frameType = frameType;
-      if (frameShape) updatedFields.frameShape = frameShape;
-      if (frameMaterial) updatedFields.frameMaterial = frameMaterial;
-      if (frameColor) updatedFields.frameColor = frameColor;
-      if (gender) updatedFields.gender = gender;
-      if (price !== undefined) updatedFields.price = price;
-      //if (stock !== undefined) updatedFields.stock = stock;
-      if (description) updatedFields.description = description;
-
-      if (discount !== undefined || price !== undefined) {
-        const basePrice = price !== undefined ? price : eyeglass.price;
-        const newDiscount =
-          discount !== undefined ? discount : eyeglass.discount;
-        updatedFields.discount = newDiscount;
-        updatedFields.finalPrice =
-          newDiscount > 0
-            ? Math.round(basePrice * (1 - newDiscount / 100))
-            : basePrice;
+      if (frameType) {
+        const allowedFrameTypes = (
+          EyeglassModel.schema.path("frameType") as any
+        ).enumValues;
+        if (allowedFrameTypes.includes(frameType)) {
+          updatedFields.frameType = frameType;
+        } else {
+          res.status(400).json({ message: "Invalid frameType value" });
+          return;
+        }
       }
+      if (frameShape) {
+        const allowedFrameShapes = (
+          EyeglassModel.schema.path("frameShape") as any
+        ).enumValues;
+        if (allowedFrameShapes.includes(frameShape)) {
+          updatedFields.frameShape = frameShape;
+        } else {
+          res.status(400).json({ message: "Invalid frameShape value" });
+          return;
+        }
+      }
+      if (frameMaterial) {
+        const allowedFrameMaterials = (
+          EyeglassModel.schema.path("frameMaterial") as any
+        ).enumValues;
+        if (allowedFrameMaterials.includes(frameMaterial)) {
+          updatedFields.frameMaterial = frameMaterial;
+        } else {
+          res.status(400).json({ message: "Invalid frameMaterial value" });
+          return;
+        }
+      }
+      if (frameColor) updatedFields.frameColor = frameColor;
+      if (frameSize) updatedFields.frameSize = frameSize;
+      if (gender) {
+        const allowedGenders = (EyeglassModel.schema.path("gender") as any)
+          .enumValues;
+        if (allowedGenders.includes(gender)) {
+          updatedFields.gender = gender;
+        } else {
+          res.status(400).json({ message: "Invalid gender value" });
+          return;
+        }
+      }
+      // if (price !== undefined) updatedFields.price = price;
+      // //if (stock !== undefined) updatedFields.stock = stock;
+
+      // if (discount !== undefined || price !== undefined) {
+      //   const basePrice = price !== undefined ? price : eyeglass.price;
+      //   const newDiscount =
+      //   discount !== undefined ? discount : eyeglass.discount;
+      //   updatedFields.discount = newDiscount;
+      //   updatedFields.finalPrice =
+      //     newDiscount > 0
+      //       ? Math.round(basePrice * (1 - newDiscount / 100))
+      //       : basePrice;
+      //     }
+      const newPrice = price !== undefined ? price : eyeglass.price;
+      const newDiscount = discount !== undefined ? discount : eyeglass.discount;
+
+      updatedFields.price = newPrice;
+      updatedFields.discount = newDiscount;
+
+      updatedFields.finalPrice =
+        newDiscount > 0
+          ? Math.round(newPrice - (newPrice * newDiscount) / 100)
+          : newPrice;
+      if (description) updatedFields.description = description;
 
       if (req.file) {
         if (eyeglass.imagePublicId) {

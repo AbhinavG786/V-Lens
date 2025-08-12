@@ -9,6 +9,7 @@ const router = Router();
 
 router.route("/").post(adminAuth.verifyAdminSession, upload.single('file'), eyeglass.createEyeglass);
 router.route("/all").get(paginationMiddleware(10, 50), eyeglass.getAllEyeglasses);
+router.route("/filters").get(paginationMiddleware(10, 50), eyeglass.getEyeglassesByFilters);
 router.route("/brand").get(paginationMiddleware(10, 50), eyeglass.getEyeglassByBrand);
 router.route("/frameType").get(paginationMiddleware(10, 50), eyeglass.getEyeglassByFrameType);
 router.route("/frameShape").get(paginationMiddleware(10, 50), eyeglass.getEyeglassByFrameShape);

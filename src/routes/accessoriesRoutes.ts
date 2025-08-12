@@ -8,6 +8,7 @@ const router = Router()
 
 router.route("/").post(adminAuth.verifyAdminSession,upload.single('file'),accessories.createAccessories);
 router.route("/all").get(paginationMiddleware(10, 50), accessories.getAllAccessories);
+router.route("/filters").get(paginationMiddleware(10, 50), accessories.getAccessoriesByFilters);
 router.route("/brand").get(paginationMiddleware(10, 50),accessories.getAccessoriesByBrand);
 router.route("/priceRange").get(paginationMiddleware(10, 50), accessories.getAccessoriesByPriceRange);
 router.route("/:accessoriesId").get(accessories.getAccessoriesById);

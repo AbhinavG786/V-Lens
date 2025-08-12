@@ -24,20 +24,19 @@ const sunglassesSchema = new Schema(
       type: Number,
       required: true,
     },
-    color:
-      {
-        type: String,
-        required: true,
-      },
+    color: {
+      type: String,
+      required: true,
+    },
     stock: {
       type: Number,
-        required: true,
+      required: true,
     },
     description: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
-     discount: {
+    discount: {
       type: Number,
       default: 0,
     },
@@ -50,18 +49,18 @@ const sunglassesSchema = new Schema(
       enum: ["men", "women", "unisex"],
       default: "unisex",
     },
-    size: 
-      {
-        type: String,
-        enum: ["S", "M", "L"],
-      },
+    size: {
+      type: String,
+      enum: ["S", "M", "L"],
+      required: true,
+    },
     imageUrl: {
       type: String,
       required: true,
     },
     imagePublicId: {
       type: String,
-        required: true,
+      required: true,
     },
   },
   { timestamps: true }
@@ -69,4 +68,7 @@ const sunglassesSchema = new Schema(
 
 type SunglassType = InferSchemaType<typeof sunglassesSchema>;
 
-export const Sunglass = mongoose.model<SunglassType>("Sunglass", sunglassesSchema);
+export const Sunglass = mongoose.model<SunglassType>(
+  "Sunglass",
+  sunglassesSchema
+);

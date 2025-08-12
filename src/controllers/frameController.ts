@@ -51,8 +51,9 @@ class FrameController {
         return;
       }
     }
-    if(frameType){
-      const allowedFrameTypes = (Frame.schema.path("frameType") as any).enumValues;
+    if (frameType) {
+      const allowedFrameTypes = (Frame.schema.path("frameType") as any)
+        .enumValues;
       if (!allowedFrameTypes.includes(frameType)) {
         res.status(400).json({ message: "Invalid frameType value" });
         return;
@@ -234,15 +235,25 @@ class FrameController {
       if (color) updatedData.color = color;
       if (size) updatedData.size = size;
       //   if (stock) updatedData.stock = stock;
-      if (price) updatedData.price = price;
       if (description) updatedData.description = description;
-      if (discount) {
-        updatedData.discount = discount;
-        updatedData.finalPrice =
-          discount > 0
-            ? Math.round(frame.price - (frame.price * discount) / 100)
-            : frame.price;
-      }
+      // if (price) updatedData.price = price;
+      // if (discount) {
+      //   updatedData.discount = discount;
+      //   updatedData.finalPrice =
+      //     discount > 0
+      //       ? Math.round(frame.price - (frame.price * discount) / 100)
+      //       : frame.price;
+      // }
+      const newPrice = price !== undefined ? price : frame.price;
+      const newDiscount = discount !== undefined ? discount : frame.discount;
+
+      updatedData.price = newPrice;
+      updatedData.discount = newDiscount;
+
+      updatedData.finalPrice =
+        newDiscount > 0
+          ? Math.round(newPrice - (newPrice * newDiscount) / 100)
+          : newPrice;
       if (gender) {
         const allowedGenders = (Frame.schema.path("gender") as any).enumValues;
         if (!allowedGenders.includes(gender)) {
@@ -251,15 +262,15 @@ class FrameController {
         }
         updatedData.gender = gender;
       }
-       if (frameType) {
-        const allowedFrameTypes = (Frame.schema.path("frameType") as any).enumValues;
+      if (frameType) {
+        const allowedFrameTypes = (Frame.schema.path("frameType") as any)
+          .enumValues;
         if (!allowedFrameTypes.includes(frameType)) {
           res.status(400).json({ message: "Invalid frameType value" });
           return;
         }
         updatedData.frameType = frameType;
       }
-      
 
       if (req.file) {
         if (frame.imagePublicId) {
@@ -331,6 +342,86 @@ class FrameController {
         .json({ message: "Frame and associated product deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Error deleting frame", error });
+    }
+  };
+
+  getFramesByFilters = async (req: Request, res: Response) => {
+    const {
+      brand,
+      frameType,
+      shape,
+      material,
+      color,
+      size,
+      gender,
+      minPrice,
+      maxPrice,
+    } = req.query;
+    const { skip, take } = req.pagination!;
+
+    try {
+      const filters: any = {};
+      if (brand) filters.brand = brand;
+      if (color) filters.color = color;
+      if (size) filters.size = size;
+      if (shape) filters.shape = shape;
+      if (material) filters.material = material;
+      if (frameType) {
+        const allowedTypes = (Frame.schema.path("frameType") as any).enumValues;
+        if (allowedTypes.includes(frameType)) {
+          filters.frameType = frameType;
+        } else {
+          res.status(400).json({ message: `Invalid frameType value.` });
+          return;
+        }
+      }
+      if (gender) {
+        const allowedGenders = (Frame.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          filters.gender = gender;
+        } else {
+          res.status(400).json({ message: `Invalid gender value.` });
+          return;
+        }
+      }
+      if (minPrice || maxPrice) {
+        filters.finalPrice = {};
+        if (minPrice) filters.finalPrice.$gte = parseFloat(minPrice as string);
+        if (maxPrice) filters.finalPrice.$lte = parseFloat(maxPrice as string);
+      }
+
+      const frames = await Frame.find(filters);
+      if (frames.length === 0) {
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      const frameIds = frames.map((l) => l._id);
+
+      const [products, total] = await Promise.all([
+        Product.find({ frameRef: { $in: frameIds } })
+          .skip(Number(skip))
+          .limit(Number(take)),
+        Product.countDocuments({ frameRef: { $in: frameIds } }),
+      ]);
+
+      if (products.length === 0) {
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      res.status(200).json({
+        data: products,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching frame products by filters:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   };
 }

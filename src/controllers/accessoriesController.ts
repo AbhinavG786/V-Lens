@@ -195,12 +195,11 @@ class AccessoriesController {
       const updatedFields: any = {};
 
       if (brand) updatedFields.brand = brand;
-      if (price) updatedFields.price = price;
       if (description) updatedFields.description = description;
-
+      
       if (gender) {
         const allowedGenders = (Accessories.schema.path("gender") as any)
-          .enumValues;
+        .enumValues;
         if (allowedGenders.includes(gender)) {
           updatedFields.gender = gender;
         } else {
@@ -208,15 +207,26 @@ class AccessoriesController {
           return;
         }
       }
+      const newPrice = price !== undefined ? price : accessory.price;
+      const newDiscount = discount !== undefined ? discount : accessory.discount;
 
-      if (discount !== undefined) {
-        updatedFields.discount = discount;
-        const basePrice = price !== undefined ? price : accessory.price;
-        updatedFields.finalPrice =
-          discount > 0
-            ? Math.round(basePrice - (basePrice * discount) / 100)
-            : basePrice;
-      }
+      updatedFields.price = newPrice;
+      updatedFields.discount = newDiscount;
+
+      updatedFields.finalPrice =
+        newDiscount > 0
+          ? Math.round(newPrice - (newPrice * newDiscount) / 100)
+          : newPrice;
+      
+      // if (price) updatedFields.price = price;
+      // if (discount !== undefined) {
+      //   updatedFields.discount = discount;
+      //   const basePrice = price !== undefined ? price : accessory.price;
+      //   updatedFields.finalPrice =
+      //     discount > 0
+      //       ? Math.round(basePrice - (basePrice * discount) / 100)
+      //       : basePrice;
+      // }
 
       if (req.file) {
         if (accessory.imagePublicId) {
@@ -302,6 +312,68 @@ class AccessoriesController {
         .json({ message: "Accessories and Product deleted successfully" });
     } catch (error) {
       console.error("Error deleting accessories:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  getAccessoriesByFilters = async (req: express.Request, res: express.Response) => {
+    const {
+      brand,
+      gender,
+      minPrice,
+      maxPrice,
+    } = req.query;
+    const { skip, take } = req.pagination!;
+
+    try {
+      const filters: any = {};
+      if (brand) filters.brand = brand;
+      if (gender) {
+        const allowedGenders = (Accessories.schema.path("gender") as any).enumValues;
+        if (allowedGenders.includes(gender)) {
+          filters.gender = gender;
+        } else {
+          res.status(400).json({ message: `Invalid gender value.` });
+          return;
+        }
+      }
+      if (minPrice || maxPrice) {
+        filters.finalPrice = {};
+        if (minPrice) filters.finalPrice.$gte = parseFloat(minPrice as string);
+        if (maxPrice) filters.finalPrice.$lte = parseFloat(maxPrice as string);
+      }
+
+      const accessories = await Accessories.find(filters);
+      if (accessories.length === 0) {
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      const accessoryIds = accessories.map((l) => l._id);
+
+      const [products, total] = await Promise.all([
+        Product.find({ accessoriesRef: { $in: accessoryIds } })
+          .skip(Number(skip))
+          .limit(Number(take)),
+        Product.countDocuments({ accessoriesRef: { $in: accessoryIds } }),
+      ]);
+
+      if (products.length === 0) {
+        res
+          .status(404)
+          .json({ message: "No products found for these filters" });
+        return;
+      }
+      res.status(200).json({
+        data: products,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching accessory products by filters:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   };
