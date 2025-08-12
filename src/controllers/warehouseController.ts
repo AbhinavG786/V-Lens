@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Warehouse } from "../models/warehouseModel";
 import { Inventory } from "../models/inventoryModel";
 import { Product } from "../models/productModel";
+import { Store } from "../models/storeModel";
 
 class WarehouseController {
   createWarehouse = async (req: express.Request, res: express.Response) => {
@@ -139,77 +140,88 @@ class WarehouseController {
   // };
 
   deleteWarehouseById = async (req: express.Request, res: express.Response) => {
-  const { id } = req.params;
-  if (!id) {
-     res.status(400).json({ error: "Warehouse ID is required" });
-     return
-  }
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const inventories = await Inventory.find({ warehouseId: id }).session(session);
-    // if (inventories.length === 0) {
-    //   await session.abortTransaction();
-    //   return res
-    //     .status(404)
-    //     .json({ error: "No inventory items found for this warehouse" });
-    // }
-
-    const typeToRefMap: Record<string, string> = {
-      lenses: "lensRef",
-      frames: "frameRef",
-      accessories: "accessoriesRef",
-      sunglasses: "sunglassesRef",
-      eyeglasses: "eyeglassesRef",
-    };
-
-    const stockUpdates: { model: mongoose.Model<any>; id: any; decrement: number }[] = [];
-
-    const productIds = inventories.map(inv => inv.productId);
-    const products = await Product.find({ _id: { $in: productIds } }).session(session);
-
-    for (const inventory of inventories) {
-      const product = products.find(p => p._id.equals(inventory.productId));
-      if (!product) {
-        await session.abortTransaction();
-         res.status(404).json({ error: "Product not found for inventory item" });
-         return
-      }
-
-      const refField = typeToRefMap[product.type];
-      if (refField && (product as any)[refField]) {
-        stockUpdates.push({
-          model: mongoose.model((product as any)[refField].constructor.modelName),
-          id: (product as any)[refField]._id,
-          decrement: inventory.stock,
-        });
-      }
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: "Warehouse ID is required" });
+      return;
     }
 
-    for (const update of stockUpdates) {
-      await update.model.updateOne(
-        { _id: update.id },
-        { $inc: { stock: -update.decrement } }
-      ).session(session);
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const inventories = await Inventory.find({ warehouseId: id }).session(
+        session
+      );
+      // if (inventories.length === 0) {
+      //   await session.abortTransaction();
+      //   return res
+      //     .status(404)
+      //     .json({ error: "No inventory items found for this warehouse" });
+      // }
+
+      const typeToRefMap: Record<string, string> = {
+        lenses: "lensRef",
+        frames: "frameRef",
+        accessories: "accessoriesRef",
+        sunglasses: "sunglassesRef",
+        eyeglasses: "eyeglassesRef",
+      };
+
+      const stockUpdates: {
+        model: mongoose.Model<any>;
+        id: any;
+        decrement: number;
+      }[] = [];
+
+      const productIds = inventories.map((inv) => inv.productId);
+      const products = await Product.find({ _id: { $in: productIds } }).session(
+        session
+      );
+
+      for (const inventory of inventories) {
+        const product = products.find((p) => p._id.equals(inventory.productId));
+        if (!product) {
+          await session.abortTransaction();
+          res
+            .status(404)
+            .json({ error: "Product not found for inventory item" });
+          return;
+        }
+
+        const refField = typeToRefMap[product.type];
+        if (refField && (product as any)[refField]) {
+          stockUpdates.push({
+            model: mongoose.model(
+              (product as any)[refField].constructor.modelName
+            ),
+            id: (product as any)[refField]._id,
+            decrement: inventory.stock,
+          });
+        }
+      }
+
+      for (const update of stockUpdates) {
+        await update.model
+          .updateOne({ _id: update.id }, { $inc: { stock: -update.decrement } })
+          .session(session);
+      }
+
+      await Store.updateMany({ warehouses: id }, { $pull: { warehouses: id } }).session(session);
+      await Warehouse.findByIdAndDelete(id).session(session);
+      await Inventory.deleteMany({ warehouseId: id }).session(session);
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(204).json({ message: "Warehouse deleted successfully" });
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error(error);
+      res.status(500).json({ error: "Failed to delete warehouse" });
     }
-    await Warehouse.findByIdAndDelete(id).session(session);
-    await Inventory.deleteMany({ warehouseId: id }).session(session);
-
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(204).json({ message: "Warehouse deleted successfully" });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error(error);
-    res.status(500).json({ error: "Failed to delete warehouse" });
-  }
-};
+  };
 }
-
-
 
 export default new WarehouseController();
