@@ -333,6 +333,66 @@ class LensController {
     }
   };
 
+  getLensByFilters=async(req:express.Request,res:express.Response)=>{
+    const {brand,type,color,power,gender} = req.query;
+    const { skip, take } = req.pagination!;
+   
+    try {
+      const filters: any = {};
+      if (brand) filters.brand = brand;
+      if (color) filters.color = color;
+      if (power) filters.power = power;
+       if(type){
+      const allowedTypes = (Lens.schema.path("type") as any).enumValues;
+      if (allowedTypes.includes(type)) {
+        filters.type = type;
+      } else {
+        res.status(400).json({ message: `Invalid type value.` });
+        return;
+      }
+    }
+    if(gender){
+      const allowedGenders = (Lens.schema.path("gender") as any).enumValues;
+      if (allowedGenders.includes(gender)) {
+        filters.gender = gender;
+      } else {
+        res.status(400).json({ message: `Invalid gender value.` });
+        return;
+      }
+    }
+
+      const lenses = await Lens.find(filters)
+      if (lenses.length === 0) {
+   res.status(404).json({ message: "No products found for these filters" });
+   return
+}
+
+      const lensIds = lenses.map(l => l._id);
+
+ const [products, total] = await Promise.all([
+      Product.find({ lensRef: { $in: lensIds } })
+        .skip(Number(skip))
+        .limit(Number(take)),
+      Product.countDocuments({ lensRef: { $in: lensIds } })
+    ]);
+
+      if (products.length === 0) {
+        res.status(404).json({ message: "No products found for these filters" });
+        return;
+      }
+      res.status(200).json({
+        data: products,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching lens products by filters:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+
   updateLensProduct = async (req: express.Request, res: express.Response) => {
     const { lensId } = req.params;
     const {

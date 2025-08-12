@@ -14,6 +14,7 @@ router.route("/priceRange").get(paginationMiddleware(10, 50), lens.getLensByPric
 router.route("/color").get(paginationMiddleware(10, 50), lens.getLensByColor);
 router.route("/gender").get(paginationMiddleware(10, 50), lens.getLensByGender);
 router.route("/power").get(paginationMiddleware(10, 50), lens.getLensByPower);
+router.route("/filters").get(paginationMiddleware(10, 50), lens.getLensByFilters);
 router.route("/:lensId").get(lens.getLensById);
 router.route("/:lensId").patch(adminAuth.verifyAdminSession,upload.single('file'),lens.updateLensProduct);
 router.route("/:lensId").delete(adminAuth.verifyAdminSession,lens.deleteLens);
