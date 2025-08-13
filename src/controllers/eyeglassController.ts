@@ -365,12 +365,12 @@ class EyeglassController {
     try {
       const filters: any = {};
       if (brand) filters.brand = brand;
-      if (frameColor) filters.color = frameColor;
-      if (frameSize) filters.size = frameSize;
+      if (frameColor) filters.frameColor = frameColor;
+      if (frameSize) filters.frameSize = frameSize;
       if (frameShape) {
         const allowedShapes = (EyeglassModel.schema.path("frameShape") as any).enumValues;
         if (allowedShapes.includes(frameShape)) {
-          filters.shape = frameShape;
+          filters.frameShape = frameShape;
         } else {
           res.status(400).json({ message: `Invalid frameShape value.` });
           return;
@@ -379,7 +379,7 @@ class EyeglassController {
       if (frameMaterial) {
         const allowedMaterials = (EyeglassModel.schema.path("frameMaterial") as any).enumValues;
         if (allowedMaterials.includes(frameMaterial)) {
-          filters.material = frameMaterial;
+          filters.frameMaterial = frameMaterial;
         } else {
           res.status(400).json({ message: `Invalid frameMaterial value.` });
           return;
@@ -421,7 +421,8 @@ class EyeglassController {
       const [products, total] = await Promise.all([
         Product.find({ eyeglassesRef: { $in: eyeglassIds } })
           .skip(Number(skip))
-          .limit(Number(take)),
+          .limit(Number(take))
+          .populate("eyeglassesRef"),
         Product.countDocuments({ eyeglassesRef: { $in: eyeglassIds } }),
       ]);
 

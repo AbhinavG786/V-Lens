@@ -377,7 +377,8 @@ class LensController {
       const [products, total] = await Promise.all([
         Product.find({ lensRef: { $in: lensIds } })
           .skip(Number(skip))
-          .limit(Number(take)),
+          .limit(Number(take))
+          .populate("lensRef"),
         Product.countDocuments({ lensRef: { $in: lensIds } }),
       ]);
 

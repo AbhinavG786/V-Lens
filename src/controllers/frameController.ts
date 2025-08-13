@@ -402,7 +402,8 @@ class FrameController {
       const [products, total] = await Promise.all([
         Product.find({ frameRef: { $in: frameIds } })
           .skip(Number(skip))
-          .limit(Number(take)),
+          .limit(Number(take))
+          .populate("frameRef"),
         Product.countDocuments({ frameRef: { $in: frameIds } }),
       ]);
 

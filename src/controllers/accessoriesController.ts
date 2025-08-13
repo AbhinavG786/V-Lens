@@ -355,7 +355,8 @@ class AccessoriesController {
       const [products, total] = await Promise.all([
         Product.find({ accessoriesRef: { $in: accessoryIds } })
           .skip(Number(skip))
-          .limit(Number(take)),
+          .limit(Number(take))
+          .populate("accessoriesRef"),
         Product.countDocuments({ accessoriesRef: { $in: accessoryIds } }),
       ]);
 

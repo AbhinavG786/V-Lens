@@ -588,7 +588,8 @@ updatedFields.finalPrice =
         const [products, total] = await Promise.all([
           Product.find({ sunglassesRef: { $in: sunglassIds } })
             .skip(Number(skip))
-            .limit(Number(take)),
+            .limit(Number(take))
+            .populate("sunglassesRef"),
           Product.countDocuments({ sunglassesRef: { $in: sunglassIds } }),
         ]);
   
