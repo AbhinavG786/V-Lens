@@ -85,6 +85,7 @@ if (!globalPhoneRegex.test(phone)) {
         secure: true,
         sameSite: "strict",
       });
+      res.clearCookie("session_exists", { secure: true, sameSite: "strict" });
 
       res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
