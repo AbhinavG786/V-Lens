@@ -7,6 +7,7 @@ import agent from "../controllers/agentController"
 
 const router = Router();
 
+router.route("/create-agent").post(adminAuth.verifyAdminSession, agent.createAgent);
 router.route("/all").get(adminAuth.verifyAdminSession, paginationMiddleware(10, 50), admin.getAllUsers);
 router.route("/agent/toggle").patch(agentAuth.verifyAgentSession, agent.toggleAvailability);
 router.route("/agent/stats/:agentId").get(adminAuth.verifyAdminSession, agent.getAgentRatingStats);

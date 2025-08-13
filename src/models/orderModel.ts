@@ -12,6 +12,10 @@ const orderItemSchema = new Schema(
       required: true,
       min: 1,
     },
+    gstAmount: {
+      type: Number,
+      required: true,
+    }, // GST per unit
     price: {
       type: Number,
       required: true,
@@ -27,6 +31,33 @@ const orderItemSchema = new Schema(
   },
   { _id: false }
 );
+
+const gstDetailsSchema = new Schema({
+  isGSTPurchase: {
+    type: Boolean,
+    default: false,
+  },
+  gstNumber: {
+    type: String,
+  },
+  companyName: {
+    type: String,
+  },
+  registrationNumber: {
+    type: String,
+  },
+  companyAddress: {
+    type: String,
+  },
+  gstRate: {
+    type: Number,
+    default: 0,
+  },
+  gstAmount: {
+    type: Number,
+    default: 0,
+  }, // total GST amount
+});
 
 const orderSchema = new Schema(
   {
@@ -46,7 +77,15 @@ const orderSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "returned"],
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "returned",
+      ],
       default: "pending",
     },
     totalAmount: {
@@ -57,9 +96,12 @@ const orderSchema = new Schema(
       type: Number,
       default: 0,
     },
-    finalAmount: {
+    subTotalAmount: {
       type: Number,
       required: true,
+    },
+    gstDetails: {
+      type: gstDetailsSchema,
     },
     shippingAddress: {
       street: { type: String, required: true },
