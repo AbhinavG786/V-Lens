@@ -69,6 +69,7 @@ if (!globalPhoneRegex.test(phone)) {
         secure: true,
         sameSite: "strict",
       });
+      res.cookie("session_exists",'true',{secure:true});
 
       res.status(200).json({ message: "User login successful", user });
     } catch (error) {
