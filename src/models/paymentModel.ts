@@ -11,10 +11,12 @@ const PaymentSchema = new Schema({
   orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true },
   amount: { type: Number, required: true },
   method: { type: String, required: true },
-  transactionId: { type: String, required: true },
+  razorpayOrderId: { type: String, required: true },
+  transactionId: { type: String},
   status: { type: String, enum: Object.values(PaymentStatus), required: true },
-  paidAt: { type: Date, default: Date.now },
-});
+  paidAt: { type: Date, default: null },
+},
+{ timestamps: true });
 
 type PaymentType = InferSchemaType<typeof PaymentSchema>;
 

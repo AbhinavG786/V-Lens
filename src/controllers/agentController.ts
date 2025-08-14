@@ -192,6 +192,26 @@ createAgent=async(req:express.Request,res:express.Response)=>{
       res.status(500).json({ error: "Internal server error" });
     }
   }
+
+  deleteAgent = async (req: express.Request, res: express.Response) => {
+    const { agentId } = req.params;
+    if (!agentId) {
+      res.status(400).json({ error: "Agent ID is required" });
+      return;
+    }
+    try {
+      const agent = await User.findById(agentId);
+      if (!agent || !agent.isAgent) {
+        res.status(404).json({ error: "Agent not found" });
+        return;
+      }
+      await agent.deleteOne();
+      res.status(204).json({ message: "Agent deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting agent:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
 }
 
 export default new AgentController();

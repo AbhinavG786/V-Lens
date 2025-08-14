@@ -3,6 +3,9 @@ import { Cart } from "../models/cartModel";
 import { Product } from "../models/productModel";
 import { User } from "../models/userModel";
 import express from "express";
+import { generateInvoicePDF } from "../utils/invoiceGenerator";
+import { razorpay } from "../utils/razorpay";
+import { PaymentStatus, Payment } from "../models/paymentModel";
 
 class OrderController {
   // createOrder = async (req: express.Request, res: express.Response) => {
@@ -252,7 +255,43 @@ class OrderController {
 
       await Cart.findOneAndUpdate({ userId: user._id }, { items: [] });
 
-      res.status(201).json(savedOrder);
+      const invoicePath = (await generateInvoicePDF(savedOrder)) as string;
+      savedOrder.invoiceUrl = invoicePath;
+      await savedOrder.save();
+
+      const options = {
+        amount: Math.round(savedOrder.totalAmount * 100), // paise
+        currency: "INR",
+        receipt: orderNumber,
+      };
+
+      const razorpayOrder = await razorpay.orders.create(options);
+
+      if (!razorpayOrder) {
+        res.status(500).json({ message: "Failed to create Razorpay order" });
+        return;
+      }
+
+      const payment = new Payment({
+        userId: user._id,
+        orderId: savedOrder._id,
+        amount: savedOrder.totalAmount,
+        method: savedOrder.paymentMethod,
+        razorpayOrderId: razorpayOrder.id,
+        status: PaymentStatus.PENDING,
+      });
+
+      const savedPayment = await payment.save();
+
+    await savedOrder.updateOne({ $push: { payments: savedPayment._id } });
+
+      res
+        .status(201)
+        .json({
+          Order: savedOrder,
+          RazorpayOrder: razorpayOrder,
+          PreVerificationPaymentDoc: savedPayment,
+        });
     } catch (error) {
       res.status(500).json({ message: "Error creating order", error });
     }

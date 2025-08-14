@@ -100,6 +100,9 @@ const orderSchema = new Schema(
       type: Number,
       required: true,
     },
+    invoiceUrl: {
+      type: String,
+    },
     gstDetails: {
       type: gstDetailsSchema,
     },
@@ -127,6 +130,19 @@ const orderSchema = new Schema(
       enum: ["pending", "completed", "failed", "refunded"],
       default: "pending",
     },
+    amountPaid: {
+      type: Number,
+      default: 0,
+    }, // Sum of successful payments
+    paidAt: {
+      type: Date,
+    },
+    payments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Payment",
+      },
+    ], // all attempts linked
     prescriptionId: {
       type: Schema.Types.ObjectId,
       ref: "Prescription",
@@ -148,6 +164,6 @@ orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ orderNumber: 1 }, { unique: true });
 orderSchema.index({ status: 1 });
 
-type OrderType = InferSchemaType<typeof orderSchema>;
+export type OrderType = InferSchemaType<typeof orderSchema>;
 
 export const Order = mongoose.model<OrderType>("Order", orderSchema);

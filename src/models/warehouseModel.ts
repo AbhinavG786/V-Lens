@@ -34,6 +34,10 @@ const warehouseSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    warehouseManager:{
+      type:Schema.Types.ObjectId,
+      ref:"User",
+    }
   },
   {
     timestamps: true,

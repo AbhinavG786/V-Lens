@@ -21,6 +21,12 @@ declare global {
           fullName: string;
           isAgent: boolean;
         };
+        warehouseManager?: {
+          uid: string;
+          email: string;
+          fullName: string;
+          isWarehouseManager: boolean;
+        };
     }
   }
 }

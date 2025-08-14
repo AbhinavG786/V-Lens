@@ -4,15 +4,16 @@ import paginationMiddleware from '../middlewares/paginationMiddleware';
 
 const router = Router();
 
-// POST /payments
-router.post('/', paymentController.createPayment);
-
-// GET /payments (paginated)
 router.get('/', paginationMiddleware(10, 50), paymentController.getAllPayments);
+router.get('/:id', paymentController.getPaymentById);
+router.post("/verify", paymentController.verifyAndSavePayment);
+
+// POST /payments
+// router.post('/', paymentController.createPayment);
+// GET /payments (paginated)
 
 // GET /payments/:id
-router.get('/:id', paymentController.getPaymentById);
-router.post('/create-order', paymentController.createOrder);
-router.post('/verify', paymentController.verifyPayment);
+// router.post('/create-order', paymentController.createPaymentOrder);
+// router.post('/verify', paymentController.verifyPayment);
 
 export default router;
