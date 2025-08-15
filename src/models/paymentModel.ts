@@ -4,6 +4,9 @@ export enum PaymentStatus {
   SUCCESS = "success",
   FAILED = "failed",
   PENDING = "pending",
+  REFUND_INITIATED = "refund_initiated",
+  REFUNDED = "refunded",
+  PARTIAL_REFUND = "partial_refund",
 }
 
 const PaymentSchema = new Schema({
@@ -15,6 +18,13 @@ const PaymentSchema = new Schema({
   transactionId: { type: String},
   status: { type: String, enum: Object.values(PaymentStatus), required: true },
   paidAt: { type: Date, default: null },
+  refundHistory:[{
+refundId: { type: String ,unique:true},
+refundAmount: { type: Number,default:0 },
+refundInitiatedAt: { type: Date, default: null },
+  refundProcessedAt: { type: Date, default: null },
+  }],
+  refundedAmount: { type: Number, default: 0 },
 },
 { timestamps: true });
 

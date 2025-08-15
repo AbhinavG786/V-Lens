@@ -7,6 +7,8 @@ const router = Router();
 router.get('/', paginationMiddleware(10, 50), paymentController.getAllPayments);
 router.get('/:id', paymentController.getPaymentById);
 router.post("/verify", paymentController.verifyAndSavePayment);
+router.post("/initiate-refund", paymentController.initiateRefund);
+router.post("/refund-webhook", paymentController.handleRazorpayWebhook);
 
 // POST /payments
 // router.post('/', paymentController.createPayment);

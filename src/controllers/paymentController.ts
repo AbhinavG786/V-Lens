@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { PaymentStatus, Payment } from "../models/paymentModel";
 import mongoose from "mongoose";
 import { Order } from "../models/orderModel";
+import { razorpay } from "../utils/razorpay";
 
 class PaymentController {
   // createPayment = async (req: Request, res: Response) => {
@@ -187,7 +188,7 @@ class PaymentController {
             ? "pending"
             : "failed";
         order.paidAt = totalPaid >= order.totalAmount ? new Date() : null;
- await order.save();
+        await order.save();
       }
       // await Order.findByIdAndUpdate(savedPayment.orderId, {
       //   paymentStatus: isValid ? "completed" : "failed",
@@ -242,6 +243,214 @@ class PaymentController {
       console.error("Payment verification error:", error);
       res.status(500).json({ message: "Internal server error", error });
       return;
+    }
+  };
+
+  initiateRefund = async (req: Request, res: Response) => {
+    const { paymentId, amount } = req.body; // amount in paise
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment || payment.status !== PaymentStatus.SUCCESS) {
+      res.status(400).json({ message: "Payment not eligible for refund" });
+      return;
+    }
+
+    try {
+      // Call Razorpay Refund API
+      if (typeof payment.transactionId === "string") {
+        const refund = await razorpay.payments.refund(payment.transactionId, {
+          amount: amount || payment.amount, // if not partial, refund full
+        });
+
+        if (!refund) {
+          res.status(500).json({
+            message: "Refund failed",
+            error: "Razorpay refund API error",
+          });
+          return;
+        }
+        // Update Payment document
+        // Push new refund entry instead of overwriting
+        payment.refundHistory.push({
+          refundId: refund.id,
+          refundAmount: refund.amount ? refund.amount / 100 : 0,
+          refundInitiatedAt: new Date(),
+        });
+
+        // Update payment status
+        const totalRefundedSoFar = payment.refundHistory.reduce(
+          (sum, r) => sum + r.refundAmount,
+          0
+        );
+        payment.status =
+          totalRefundedSoFar === payment.amount
+            ? PaymentStatus.REFUND_INITIATED
+            : PaymentStatus.PARTIAL_REFUND;
+
+        await payment.save();
+
+        // payment.refundId = refund.id;
+        // payment.refundedAmount = refund.amount ? refund.amount / 100 : 0;
+        // payment.status =
+        //   refund.amount === payment.amount
+        //     ? PaymentStatus.REFUND_INITIATED
+        //     : PaymentStatus.PARTIAL_REFUND;
+        // payment.refundInitiatedAt = new Date();
+        // await payment.save();
+
+        res.json({ message: "Refund initiated", refund });
+      }
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ message: "Refund failed", error: err.message });
+    }
+  };
+
+  // handleRazorpayWebhook = async (req: Request, res: Response) => {
+  //   const { event, payload } = req.body;
+
+  //   if (event === "refund.processed") {
+  //     const refund = payload.refund.entity;
+  //     const payment = await Payment.findOne({ refundId: refund.id });
+
+  //     if (payment) {
+  //       if (payment.refundProcessedAt) {
+  //         res.status(200).json({ received: true }); // already processed
+  //         return;
+  //       }
+
+  //       const totalRefunded = refund.amount / 100; // convert to rupees
+  //       if(totalRefunded > payment.amount) {
+  //         res.status(400).json({ message: "Refund amount exceeds payment amount" });
+  //         return;
+  //       }
+  //       payment.status =
+  //         totalRefunded === payment.amount
+  //           ? PaymentStatus.REFUNDED
+  //           : PaymentStatus.PARTIAL_REFUND;
+  //       // payment.status =
+  //       //   refund.amount === payment.amount
+  //       //     ? PaymentStatus.REFUNDED
+  //       //     : PaymentStatus.PARTIAL_REFUND;
+  //       payment.refundProcessedAt = new Date();
+  //       await payment.save();
+
+  //       // Update order amountPaid
+  //       const order = await Order.findById(payment.orderId);
+  // if (order) {
+  //   const totalPaid = await Payment.aggregate([
+  //     { $match: { orderId: order._id, status: PaymentStatus.SUCCESS } },
+  //     { $group: { _id: null, total: { $sum: "$amount" } } }
+  //   ]);
+  //   const totalRefundedAmt = await Payment.aggregate([
+  //     { $match: { orderId: order._id, status: { $in: [PaymentStatus.REFUNDED, PaymentStatus.PARTIAL_REFUND] } } },
+  //     { $group: { _id: null, total: { $sum: "$refundedAmount" } } }
+  //   ]);
+  //   order.amountPaid = (totalPaid[0]?.total || 0) - (totalRefundedAmt[0]?.total || 0);
+  //   order.paymentStatus = order.amountPaid <= 0 ? "refunded" : "partial";
+  //   order.paidAt = order.amountPaid <= 0 ? null : order.paidAt;
+  //   await order.save();
+  //       // const order = await Order.findById(payment.orderId);
+  //       // if (order) {
+  //       //   order.amountPaid -= refund.amount / 100; // convert to currency unit
+  //       //   if (order.amountPaid <= 0) {
+  //       //     order.paymentStatus = "refunded";
+  //       //     order.paidAt = null;
+  //       //   } else {
+  //       //     order.paymentStatus = "partial";
+  //       //   }
+  //       //   await order.save();
+  //       }
+  //     }
+  //   }
+
+  //   res.status(200).json({ received: true });
+  // };
+
+  handleRazorpayWebhook = async (req: Request, res: Response) => {
+    try {
+      const { event, payload } = req.body;
+
+      if (event === "refund.processed") {
+        const refund = payload.refund.entity;
+        // Find the payment that contains this refund
+        const payment = await Payment.findOne({
+          transactionId: refund.payment_id,
+          "refundHistory.refundId": refund.id,
+        });
+
+        if (!payment) {
+          console.warn(`Payment not found for refund ${refund.id}`);
+          res.status(404).json({ message: "Payment not found" });
+          return;
+        }
+
+        // Update the matching refund entry inside the array
+        const refundEntry = payment.refundHistory.find(
+          (r) => r.refundId === refund.id
+        );
+        if (refundEntry) {
+          refundEntry.refundProcessedAt = new Date(refund.created_at * 1000); // convert from Unix seconds
+        }
+
+        // Recalculate payment status
+        const totalRefunded = payment.refundHistory.reduce(
+          (sum, r) => sum + r.refundAmount,
+          0
+        );
+        payment.refundedAmount = totalRefunded;
+        if (totalRefunded > payment.amount) {
+          console.warn(`Refund amount ${totalRefunded} exceeds payment amount ${payment.amount}`);
+        } else if (totalRefunded === payment.amount) {
+          payment.status = PaymentStatus.REFUNDED;
+        } else if (totalRefunded > 0) {
+          payment.status = PaymentStatus.PARTIAL_REFUND;
+        }
+
+        await payment.save();
+
+        // Update order's amountPaid & status
+        const order = await Order.findById(payment.orderId);
+        if (order) {
+          // Calculate total successful payments
+          const totalPaid = await Payment.aggregate([
+            { $match: { orderId: order._id, status: PaymentStatus.SUCCESS } },
+            { $group: { _id: null, total: { $sum: "$amount" } } },
+          ]);
+
+          // Calculate total refunded across all payments for this order
+          const totalRefundedAmt = await Payment.aggregate([
+            {
+              $match: {
+                orderId: order._id,
+                status: {
+                  $in: [PaymentStatus.REFUNDED, PaymentStatus.PARTIAL_REFUND],
+                },
+              },
+            },
+            { $group: { _id: null, total: { $sum: "$refundedAmount" } } },
+          ]);
+
+          order.amountPaid =
+            (totalPaid[0]?.total || 0) - (totalRefundedAmt[0]?.total || 0);
+
+          if (order.amountPaid <= 0) {
+            order.paymentStatus = "refunded";
+            order.paidAt = null;
+          } else if (order.amountPaid < order.totalAmount) {
+            order.paymentStatus = "partial";
+          }
+
+          await order.save();
+        }
+
+        res
+          .status(200)
+          .json({ message: "Refund status updated", received: true });
+      }
+    } catch (err) {
+      console.error("Refund webhook error:", err);
+      res.status(500).json({ message: "Internal server error" });
     }
   };
 }
