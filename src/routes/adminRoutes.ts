@@ -14,6 +14,7 @@ router.route("/agent/stats/:agentId").get(adminAuth.verifyAdminSession, agent.ge
 router.route("/agent/all").get(adminAuth.verifyAdminSession,paginationMiddleware(10,50), agent.getAllAgents);
 router.route("/agent/available").get(adminAuth.verifyAdminSession, paginationMiddleware(10,50), agent.getAllAvailableAgents);
 router.route("/agent/status/:agentId").get(agent.getAgentLiveAvailabilityStatus)
+router.route("/agent/delete/:agentId").delete(adminAuth.verifyAdminSession, agent.deleteAgent);
 router.route("/:userId").get(adminAuth.verifyAdminSession, admin.getUserById);
 router.route("/agent/update/:agentId").patch(adminAuth.verifyAdminSession, agent.updateAgentProperties);
 router.route("/:userId").patch(adminAuth.verifyAdminSession, admin.updateUser);
