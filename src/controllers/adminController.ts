@@ -99,6 +99,24 @@ class AdminController {
     }
   };
 
+  getAllAdmins=async(req:express.Request,res:express.Response)=>{
+    const {skip,take}=req.pagination!;
+    try{
+        const admins=await User.find({isAdmin:true}).skip(Number(skip)).limit(Number(take));
+        const total=await User.countDocuments({isAdmin:true});
+        res.status(200).json({
+          data: admins,
+          total,
+          skip: Number(skip),
+          take: Number(take),
+          totalPages: Math.ceil(total / Number(take)),
+        });
+    }
+    catch(error){
+      res.status(500).json({ message: "Error fetching admins", error });
+    }
+  }
+
 }
 
 export default new AdminController();
