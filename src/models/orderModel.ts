@@ -28,6 +28,11 @@ const orderItemSchema = new Schema(
       type: Number,
       required: true,
     },
+    warehouseId: {
+      type: Schema.Types.ObjectId,
+      ref: "Warehouse",
+      required: false, // Admin will assign this
+    },
   },
   { _id: false }
 );
@@ -87,6 +92,30 @@ const orderSchema = new Schema(
         "returned",
       ],
       default: "pending",
+    },
+    // COD specific status fields
+    codStatus: {
+      orderConfirmed: {
+        type: Boolean,
+        default: false,
+      },
+      inTransit: {
+        type: Boolean,
+        default: false,
+      },
+      orderDelivered: {
+        type: Boolean,
+        default: false,
+      },
+      confirmedAt: {
+        type: Date,
+      },
+      transitAt: {
+        type: Date,
+      },
+      deliveredAt: {
+        type: Date,
+      },
     },
     totalAmount: {
       type: Number,

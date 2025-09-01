@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import { PaymentStatus, Payment } from "../models/paymentModel";
 import mongoose from "mongoose";
 import { Order } from "../models/orderModel";
+import { Inventory } from "../models/inventoryModel";
+import { Product } from "../models/productModel";
 import { razorpay } from "../utils/razorpay";
 
 class PaymentController {
@@ -188,6 +190,12 @@ class PaymentController {
             ? "pending"
             : "failed";
         order.paidAt = totalPaid >= order.totalAmount ? new Date() : null;
+        
+        // If payment is fully completed, deduct inventory
+        if (totalPaid >= order.totalAmount && isValid) {
+          await this.deductInventoryFromOrder(order);
+        }
+        
         await order.save();
       }
       // await Order.findByIdAndUpdate(savedPayment.orderId, {
@@ -451,6 +459,93 @@ class PaymentController {
     } catch (err) {
       console.error("Refund webhook error:", err);
       res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  // Helper method to deduct inventory when payment is completed
+  async deductInventoryFromOrder(order: any) {
+    try {
+      const typeToRefMap: Record<string, string> = {
+        lenses: "lensRef",
+        frames: "frameRef",
+        accessories: "accessoriesRef",
+        sunglasses: "sunglassesRef",
+        eyeglasses: "eyeglassesRef",
+      };
+
+      for (const item of order.items) {
+        if (!item.warehouseId) {
+          console.warn(`No warehouse assigned for product ${item.productId} in order ${order._id}`);
+          continue;
+        }
+
+        // Deduct from specific warehouse inventory
+        const inventory = await Inventory.findOne({
+          productId: item.productId,
+          warehouseId: item.warehouseId,
+        });
+
+        if (inventory && inventory.stock >= item.quantity) {
+          inventory.stock -= item.quantity;
+          await inventory.save();
+
+          // Update product total stock
+          const product = await Product.findById(item.productId);
+          if (product) {
+            const refField = typeToRefMap[product.type];
+            if (refField) {
+              const populatedProduct = await product.populate<{
+                [key: string]: { stock: number } | null;
+              }>({
+                path: refField,
+                select: "stock",
+              });
+              const subDoc = (populatedProduct as any)[refField];
+              if (subDoc) {
+                // Recalculate total stock across all warehouses
+                const totalStock = await Inventory.aggregate([
+                  { $match: { productId: product._id } },
+                  { $group: { _id: null, totalStock: { $sum: "$stock" } } },
+                ]);
+                subDoc.stock = totalStock[0]?.totalStock || 0;
+                await subDoc.save();
+              }
+            }
+          }
+        } else {
+          console.error(`Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error deducting inventory:", error);
+    }
+  }
+
+  // Method for manual inventory deduction (for COD when admin confirms delivery)
+  deductInventoryForCOD = async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        res.status(404).json({ message: "Order not found" });
+        return;
+      }
+
+      if (order.paymentMethod !== 'cod') {
+        res.status(400).json({ message: "This method is only for COD orders" });
+        return;
+      }
+
+      if (!order.codStatus?.orderDelivered) {
+        res.status(400).json({ message: "Order must be marked as delivered first" });
+        return;
+      }
+
+      await this.deductInventoryFromOrder(order);
+      res.status(200).json({ message: "Inventory deducted successfully for COD order" });
+    } catch (error) {
+      res.status(500).json({ message: "Error deducting inventory", error });
     }
   };
 }
