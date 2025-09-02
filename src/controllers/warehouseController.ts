@@ -393,6 +393,23 @@ class WarehouseController {
       res.status(500).json({ error: "Failed to transfer stock" });
     }
   };
+
+  getAllWarehouseManagers=async(req:express.Request,res:express.Response)=>{
+    const {skip,take}=req.pagination!
+    try{
+    const managers=await User.find({isWarehouseManager:true}).skip(Number(skip)).limit(Number(take))
+    const total=await User.countDocuments({isWarehouseManager:true})
+     res.json({
+        data: managers,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to retrieve warehouse managers" });
+    }
+  }
 }
 
 export default new WarehouseController();
