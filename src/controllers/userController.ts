@@ -3,6 +3,7 @@ import express from "express";
 import { uploadBufferToCloudinary } from "../utils/cloudinary";
 import cloudinary from "../utils/cloudinary";
 import admin from "../firebase/firebaseInit"
+import sendMailer from "../utils/sendMailer";
 
 class UserController {
   getUserProfile = async (req: express.Request, res: express.Response) => {
@@ -98,6 +99,25 @@ class UserController {
       res.status(500).json({ message: "Error deleting user", error });
     }
   }
+
+  contactUs = async (req: express.Request, res: express.Response) => {
+    const { name, email, phone, company } = req.body;
+
+    if (!name || !email || !phone || !company) {
+      res.status(400).json({ message: "All fields are required" });
+      return;
+    }
+
+    try {
+      const clientData = { name, phone, company };
+      const adminData = { name, email, phone, company };
+      await sendMailer.sendContactUsFeedbackEmailToClient(email, clientData);
+      await sendMailer.sendContactUsFeedbackEmailToAdmin(adminData);
+      res.status(200).json({ message: "Contact Us Form submitted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Error submitting Contact Us Form", error });
+    }
+  };
 }
 
 export default new UserController();

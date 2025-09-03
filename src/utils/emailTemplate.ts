@@ -9,6 +9,8 @@ interface TemplateDataMap {
   registration: { name: string; email: string };
   passwordReset: { resetUrl: string };
   insufficientStock: InsufficientStockData;
+  contactUsFeedbackClient: { name: string; phone: string; company: string };
+  contactUsFeedbackAdmin: { name: string; email: string; phone: string; company: string };
 }
 
 export const generateEmailTemplate = <
@@ -185,6 +187,50 @@ insufficientStock:`
     </div>
   </body>
 </html>
+`,
+contactUsFeedbackClient:`
+ <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
+            .container { width: 80%; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
+            .content { margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="content">
+              <p>Hello ${(data as TemplateDataMap["contactUsFeedbackClient"]).name},</p>
+              <p>Thank you for your valuable feedback. We appreciate your input! We will reply to you shortly!</p>
+              <p>Best regards,</p>
+              <p>V-Lens</p>
+            </div>
+          </div>
+        </body>
+      </html>
+`,
+contactUsFeedbackAdmin:`
+ <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f4f4; }
+            .container { width: 80%; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
+            .content { margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="content">
+              <p>Contact Form submitted by:- </p>
+              <p>Name: ${(data as TemplateDataMap["contactUsFeedbackAdmin"]).name}</p>
+              <p>Email: ${(data as TemplateDataMap["contactUsFeedbackAdmin"]).email}</p>
+              <p>Phone: ${(data as TemplateDataMap["contactUsFeedbackAdmin"]).phone}</p>
+              <p>Company: ${(data as TemplateDataMap["contactUsFeedbackAdmin"]).company}</p>
+              <p>V-Lens</p>
+            </div>
+          </div>
+        </body>
+      </html>
 `
   };
   return templates[type];
