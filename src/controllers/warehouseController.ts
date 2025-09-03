@@ -63,12 +63,9 @@ class WarehouseController {
         }
         const globalPhoneRegex = /^\+[1-9]\d{1,14}$/;
         if (!globalPhoneRegex.test(phone)) {
-          res
-            .status(400)
-            .json({
-              error:
-                "Invalid phone number. Use E.164 format, e.g., +14155552671",
-            });
+          res.status(400).json({
+            error: "Invalid phone number. Use E.164 format, e.g., +14155552671",
+          });
           return;
         }
         user = await User.create({
@@ -87,14 +84,19 @@ class WarehouseController {
         return;
       }
 
-      res.status(200).json({ message: "Warehouse Manager creation successful", user });
+      res
+        .status(200)
+        .json({ message: "Warehouse Manager creation successful", user });
     } catch (error) {
       console.error("Warehouse Manager creation failed:", error);
       res.status(401).json({ error: "Failed to create Warehouse Manager" });
     }
   };
 
-  assignWarehouseManager = async (req: express.Request, res: express.Response) => {
+  assignWarehouseManager = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
     const { warehouseId, userId } = req.body;
     if (!warehouseId || !userId) {
       res.status(400).json({ error: "Warehouse ID and User ID are required" });
@@ -106,14 +108,16 @@ class WarehouseController {
         res.status(404).json({ error: "Warehouse not found" });
         return;
       }
-      const user=await User.findById(userId);
+      const user = await User.findById(userId);
       if (!user || !user.isWarehouseManager) {
         res.status(404).json({ error: "Warehouse User not found" });
         return;
       }
       warehouse.warehouseManager = userId;
       await warehouse.save();
-      res.status(200).json({ message: "Warehouse Manager assigned successfully" });
+      res
+        .status(200)
+        .json({ message: "Warehouse Manager assigned successfully" });
     } catch (error) {
       console.error("Failed to assign Warehouse Manager:", error);
       res.status(500).json({ error: "Failed to assign Warehouse Manager" });
@@ -357,8 +361,8 @@ class WarehouseController {
       const data = {
         productId: productId,
         currentStock: sourceInventory.stock,
-        threshold: sourceInventory.threshold
-      }
+        threshold: sourceInventory.threshold,
+      };
 
       if (sourceInventory.stock < sourceInventory.threshold) {
         //send email to warehouse manager and admin
@@ -394,12 +398,17 @@ class WarehouseController {
     }
   };
 
-  getAllWarehouseManagers=async(req:express.Request,res:express.Response)=>{
-    const {skip,take}=req.pagination!
-    try{
-    const managers=await User.find({isWarehouseManager:true}).skip(Number(skip)).limit(Number(take))
-    const total=await User.countDocuments({isWarehouseManager:true})
-     res.json({
+  getAllWarehouseManagers = async (
+    req: express.Request,
+    res: express.Response
+  ) => {
+    const { skip, take } = req.pagination!;
+    try {
+      const managers = await User.find({ isWarehouseManager: true })
+        .skip(Number(skip))
+        .limit(Number(take));
+      const total = await User.countDocuments({ isWarehouseManager: true });
+      res.json({
         data: managers,
         total,
         skip: Number(skip),
@@ -409,7 +418,28 @@ class WarehouseController {
     } catch (error) {
       res.status(500).json({ error: "Failed to retrieve warehouse managers" });
     }
+  };
+
+  deleteWarehouseManagerById = async (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: "Warehouse Manager ID is required" });
+      return;
+    }
+    try {
+      const user = await User.findById(id);
+      if (!user || !user.isWarehouseManager) {
+        res.status(404).json({ error: "Warehouse Manager not found" });
+        return;
+      }
+      await User.findByIdAndDelete(id);
+      res.status(204).json({ message: "Warehouse Manager deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete Warehouse Manager" });
+    }
   }
+
+  
 }
 
 export default new WarehouseController();

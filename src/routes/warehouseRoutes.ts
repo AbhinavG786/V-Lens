@@ -14,6 +14,7 @@ router.route("/all").get(adminAuth.verifyAdminSession,paginationMiddleware(10,50
 router.route("/managers").get(adminAuth.verifyAdminSession,paginationMiddleware(10,50),warehouse.getAllWarehouseManagers)
 router.route("/:id").get(adminAuth.verifyAdminSession,warehouse.getWarehouseById)
 router.route("/:id").patch(adminAuth.verifyAdminSession,warehouse.updateWarehouseById)
+router.route("/managers/:id").delete(adminAuth.verifyAdminSession, warehouse.deleteWarehouseManagerById)
 router.route("/:id").delete(adminAuth.verifyAdminSession,warehouse.deleteWarehouseById)
 
 export default router;
