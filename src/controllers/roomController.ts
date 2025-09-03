@@ -10,19 +10,17 @@ import express from "express";
 class RoomController {
   getOrCreateRoom = async (req: express.Request, res: express.Response) => {
     const firebaseUID = req.user?.uid;
+
     if (!firebaseUID) {
       res.status(400).json({ error: "User not authenticated" });
       return;
     }
-
     const currentUser = await User.findOne({ firebaseUID });
-
     if (!currentUser) {
       res.status(404).json({ error: "User not found" });
       return;
     }
     const userId = currentUser._id;
-
     try {
       // const allOnlineAgents = await User.find(
       //   {
@@ -47,26 +45,24 @@ class RoomController {
       // const agentId = randomAgent._id;
 
       const agent = await User.findOneAndUpdate(
-      {
-        isAgent: true,
-        isAvailable: true,
-        _id: { $in: Array.from(onlineAgents.keys()) },
-        $expr: { $lt: ["$currentLoad", "$maxLoad"] },
-      },
-      {
-        $inc: { currentLoad: 1 },
-      },
-      {
-        new: true,
+        {
+          isAgent: true,
+          isAvailable: true,
+          _id: { $in: Array.from(onlineAgents.keys()) },
+          $expr: { $lt: ["$currentLoad", "$maxLoad"] },
+        },
+        {
+          $inc: { currentLoad: 1 },
+        },
+        {
+          new: true,
+        }
+      );
+      if (!agent) {
+        res.status(503).json({ error: "No available agents online" });
+        return;
       }
-    );
-
-    if (!agent) {
-       res.status(503).json({ error: "No available agents online" });
-       return
-    }
-   const agentId = agent._id;
-
+      const agentId = agent._id;
       let room = await Room.findOne({
         participants: { $size: 2, $all: [userId, agentId] },
         isChatEnded: false,
@@ -78,7 +74,16 @@ class RoomController {
           agentAssigned: agentId,
         });
       }
-      // await User.findByIdAndUpdate(agentId, { $inc: { currentLoad: 1 } });
+      // Emit event to agent that a new chat has been assigned
+      const agentSocketId = onlineAgents.get(agentId.toString());
+      if (agentSocketId) {
+        io.to(agentSocketId).emit("new-chat-assigned", { room });
+        console.log(
+          "📨 Emitted 'new-chat-assigned' to agent:",
+          agentId.toString()
+        );
+      }
+
       if (agent.currentLoad >= agent.maxLoad) {
         await User.findByIdAndUpdate(agentId, { isAvailable: false });
       }
@@ -109,10 +114,10 @@ class RoomController {
         $inc: { currentLoad: -1 },
       });
       const agent = await User.findById(room.agentAssigned);
-if (agent && agent.currentLoad < agent.maxLoad && !agent.isAvailable) {
-  agent.isAvailable = true;
-  await agent.save();
-}
+      if (agent && agent.currentLoad < agent.maxLoad && !agent.isAvailable) {
+        agent.isAvailable = true;
+        await agent.save();
+      }
       res.status(200).json({ message: "Chat ended successfully" });
     } catch (error) {
       console.error("Error ending chat:", error);
