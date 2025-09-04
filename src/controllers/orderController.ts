@@ -341,6 +341,13 @@ class OrderController {
         res.status(404).json({ message: "User not found" });
         return;
       }
+        const typeToRefMap: Record<string, string> = {
+        lenses: "lensRef",
+        frames: "frameRef",
+        accessories: "accessoriesRef",
+        sunglasses: "sunglassesRef",
+        eyeglasses: "eyeglassesRef",
+      };
       const orders = await Order.find({ userId: user._id })
         .populate("items.productId")
         .populate("prescriptionId")

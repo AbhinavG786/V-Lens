@@ -201,9 +201,13 @@ contactUsFeedbackClient:`
           <div class="container">
             <div class="content">
               <p>Hello ${(data as TemplateDataMap["contactUsFeedbackClient"]).name},</p>
-              <p>Thank you for your valuable feedback. We appreciate your input! We will reply to you shortly!</p>
+              <p>We appreciate your feedback on VLens.</p>
+              <p>Our goal is to provide you with the perfect blend of technology and style in eyewear, and your input helps us serve you better.</p>
+              <p>Our team is reviewing your suggestions and will continue to refine our platform to ensure you enjoy a seamless shopping and vision experience.</p>
+              <p>Thank you once again for helping us see things more clearly.</p>
               <p>Best regards,</p>
-              <p>V-Lens</p>
+              <p>Team VLens</p>
+              <p>Powered by Valsco Technology</p>
             </div>
           </div>
         </body>
