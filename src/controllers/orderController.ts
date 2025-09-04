@@ -219,10 +219,10 @@ class OrderController {
         const refField = typeToRefMap[product.type];
         if (refField) {
           const populatedProduct = await product.populate<{
-            [key: string]: { discount: number; finalPrice: number } | null;
+            [key: string]: { discount: number; finalPrice: number, price: number } | null;
           }>({
             path: refField,
-            select: "discount finalPrice",
+            select: "discount finalPrice price",
           });
 
           const subDoc = (populatedProduct as any)[refField];

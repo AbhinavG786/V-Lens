@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import { Order } from "../models/orderModel";
 import { Inventory } from "../models/inventoryModel";
 import { Product } from "../models/productModel";
+import { User } from "../models/userModel";
+import { RefundRequest } from "../models/refundRequestModel";
 import { razorpay } from "../utils/razorpay";
 
 class PaymentController {
@@ -190,7 +192,7 @@ class PaymentController {
             ? "pending"
             : "failed";
         order.paidAt = totalPaid >= order.totalAmount ? new Date() : null;
-        
+
         // If payment is fully completed, deduct inventory
         if (totalPaid >= order.totalAmount && isValid) {
           const allAssigned = order.items.every((it: any) => it.warehouseId);
@@ -199,7 +201,8 @@ class PaymentController {
               verified: true,
               payment,
               order,
-              message: "Payment verified, but warehouses must be assigned for all items before inventory deduction.",
+              message:
+                "Payment verified, but warehouses must be assigned for all items before inventory deduction.",
             });
             return;
           }
@@ -207,11 +210,14 @@ class PaymentController {
             await this.deductInventoryFromOrder(order);
             await order.save();
           } catch (err) {
-            res.status(500).json({ message: "Payment verified but inventory deduction failed", error: err });
+            res.status(500).json({
+              message: "Payment verified but inventory deduction failed",
+              error: err,
+            });
             return;
           }
         }
-        
+
         await order.save();
       }
       // await Order.findByIdAndUpdate(savedPayment.orderId, {
@@ -271,7 +277,24 @@ class PaymentController {
   };
 
   initiateRefund = async (req: Request, res: Response) => {
-    const { paymentId, amount } = req.body; // amount in paise
+    // const { paymentId, amount } = req.body; // amount in paise
+    const { requestId } = req.params;
+    const refundReq = await RefundRequest.findById(requestId).populate(
+      "paymentId"
+    );
+
+    if (!refundReq || refundReq.status !== "pending") {
+      res.status(400).json({ message: "Invalid or already processed request" });
+      return;
+    }
+
+    const paymentId = refundReq.paymentId;
+    const amount = refundReq.amount; // in paise
+
+    if (!paymentId) {
+      res.status(400).json({ message: "paymentId is required" });
+      return;
+    }
 
     const payment = await Payment.findById(paymentId);
     if (!payment || payment.status !== PaymentStatus.SUCCESS) {
@@ -312,6 +335,9 @@ class PaymentController {
             : PaymentStatus.PARTIAL_REFUND;
 
         await payment.save();
+
+        refundReq.status = "initiated";
+        await refundReq.save();
 
         // payment.refundId = refund.id;
         // payment.refundedAmount = refund.amount ? refund.amount / 100 : 0;
@@ -424,7 +450,9 @@ class PaymentController {
         );
         payment.refundedAmount = totalRefunded;
         if (totalRefunded > payment.amount) {
-          console.warn(`Refund amount ${totalRefunded} exceeds payment amount ${payment.amount}`);
+          console.warn(
+            `Refund amount ${totalRefunded} exceeds payment amount ${payment.amount}`
+          );
         } else if (totalRefunded === payment.amount) {
           payment.status = PaymentStatus.REFUNDED;
         } else if (totalRefunded > 0) {
@@ -457,7 +485,8 @@ class PaymentController {
           ]);
 
           order.amountPaid =
-            (totalPaidAgg[0]?.total ?? 0) - (totalRefundedAmtAgg[0]?.total ?? 0);
+            (totalPaidAgg[0]?.total ?? 0) -
+            (totalRefundedAmtAgg[0]?.total ?? 0);
 
           if (order.amountPaid <= 0) {
             order.paymentStatus = "refunded";
@@ -469,6 +498,11 @@ class PaymentController {
           await order.save();
         }
 
+        await RefundRequest.findOneAndUpdate(
+          { paymentId: payment._id, status: "initiated" },
+          { status: "processed" }
+        );
+
         res
           .status(200)
           .json({ message: "Refund status updated", received: true });
@@ -476,6 +510,79 @@ class PaymentController {
     } catch (err) {
       console.error("Refund webhook error:", err);
       res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  requestRefund = async (req: Request, res: Response) => {
+    const { paymentId, amount, reason } = req.body; //amoount in paise
+    const firebaseUID = req.user.uid;
+    if (!firebaseUID) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    try {
+      const user = await User.findOne({ firebaseUID });
+      if (!user) {
+        res.status(401).json({ message: "User not found" });
+        return;
+      }
+
+      const userId = user._id;
+
+      const payment = await Payment.findById(paymentId);
+      if (!payment || payment.userId.toString() !== userId.toString()) {
+        res.status(403).json({ message: "Invalid payment" });
+        return;
+      }
+
+      if (payment.status !== PaymentStatus.SUCCESS) {
+        res.status(400).json({ message: "Refund not allowed" });
+        return;
+      }
+
+      if ((amount / 100) > payment.amount) {
+        res.status(400).json({ message: "Invalid refund amount" });
+        return;
+      }
+
+      const refundReq = await RefundRequest.create({
+        paymentId,
+        userId,
+        amount, //in paise
+        reason,
+        status: "pending",
+      });
+
+      res.json({ message: "Refund request submitted", refundReq });
+    } catch (err) {
+      console.error("Refund request error:", err);
+      res.status(500).json({ message: "Internal server error", error: err });
+    }
+  };
+
+  rejectRefund = async (req: Request, res: Response) => {
+    const { requestId } = req.params;
+    if (!requestId) {
+      res.status(400).json({ message: "requestId is required" });
+      return;
+    }
+    try {
+      const refundReq = await RefundRequest.findById(requestId);
+
+      if (!refundReq || refundReq.status !== "pending") {
+        res
+          .status(400)
+          .json({ message: "Invalid or already processed request" });
+        return;
+      }
+      refundReq.status = "rejected";
+      await refundReq.save();
+
+      res.json({ message: "Refund request rejected" });
+    } catch (err) {
+      console.error("Reject refund error:", err);
+      res.status(500).json({ message: "Internal server error", error: err });
     }
   };
 
@@ -495,7 +602,9 @@ class PaymentController {
       for (const item of order.items) {
         if (!item.warehouseId) {
           await session.abortTransaction();
-          throw new Error(`Warehouse not assigned for product ${item.productId} in order ${order._id}`);
+          throw new Error(
+            `Warehouse not assigned for product ${item.productId} in order ${order._id}`
+          );
         }
 
         // Atomically decrement stock with guard
@@ -511,7 +620,9 @@ class PaymentController {
 
         if (!inventory) {
           await session.abortTransaction();
-          throw new Error(`Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`);
+          throw new Error(
+            `Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`
+          );
         }
 
         // Update product aggregate stock on subdoc
@@ -519,7 +630,9 @@ class PaymentController {
         if (product) {
           const refField = typeToRefMap[product.type];
           if (refField) {
-            const populatedProduct = await product.populate<{ [k: string]: { stock: number } | null }>({
+            const populatedProduct = await product.populate<{
+              [k: string]: { stock: number } | null;
+            }>({
               path: refField,
               select: "stock",
             });
@@ -540,13 +653,14 @@ class PaymentController {
       await session.commitTransaction();
     } catch (error) {
       console.error("Error deducting inventory:", error);
-      try { await session.abortTransaction(); } catch {}
+      try {
+        await session.abortTransaction();
+      } catch {}
       throw error;
     } finally {
       session.endSession();
     }
   }
-
 }
 
 export default new PaymentController();
