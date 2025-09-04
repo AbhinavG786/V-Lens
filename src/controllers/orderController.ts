@@ -349,9 +349,16 @@ class OrderController {
         eyeglasses: "eyeglassesRef",
       };
       const orders = await Order.find({ userId: user._id })
-        .populate("items.productId")
+        .populate({
+        path: "items.productId",
+        model: "Product",
+        populate: Object.values(typeToRefMap).map((refField) => ({
+          path: refField, // dynamically populate all ref fields
+        })),
+      })
         .populate("prescriptionId")
         .sort({ createdAt: -1 });
+
 
       res.status(200).json(orders);
     } catch (error) {
@@ -379,8 +386,21 @@ class OrderController {
         res.status(404).json({ message: "User not found" });
         return;
       }
+      const typeToRefMap: Record<string, string> = {
+        lenses: "lensRef",
+        frames: "frameRef",
+        accessories: "accessoriesRef",
+        sunglasses: "sunglassesRef",
+        eyeglasses: "eyeglassesRef",
+      };
       const order = await Order.findOne({ _id: id, userId: user._id })
-        .populate("items.productId")
+        .populate({
+        path: "items.productId",
+        model: "Product",
+        populate: Object.values(typeToRefMap).map((refField) => ({
+          path: refField, // dynamically populate all ref fields
+        })),
+      })
         .populate("prescriptionId");
 
       if (!order) {
