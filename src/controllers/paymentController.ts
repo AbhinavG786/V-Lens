@@ -661,6 +661,38 @@ class PaymentController {
       session.endSession();
     }
   }
+
+  getAllRefundRequests = async (req: Request, res: Response) => {
+    const {skip,take} = req.pagination!;
+  try {
+    const refundRequests = await RefundRequest.find()
+      .populate({
+        path: "userId",
+        select: "fullName email",
+      })
+      .populate({
+        path: "paymentId",
+        select: "amount status transactionId orderId",
+      })
+      .sort({ createdAt: -1 })
+      .skip(Number(skip))
+      .limit(Number(take));
+    const total = await RefundRequest.countDocuments();
+
+    res.json({
+      message: "Refund requests fetched successfully",
+      data:refundRequests,
+      total,
+      skip: Number(skip),
+      take: Number(take),
+      totalPages: Math.ceil(total / Number(take)),
+    });
+  } catch (err) {
+    console.error("Error fetching refund requests:", err);
+    res.status(500).json({ message: "Internal server error", error: err });
+  }
+};
+
 }
 
 export default new PaymentController();

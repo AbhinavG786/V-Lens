@@ -7,6 +7,7 @@ import firebaseAuthMiddleware from '../middlewares/firebaseAuth';
 const router = Router();
 
 router.get('/', paginationMiddleware(10, 50), paymentController.getAllPayments);
+router.get("/refund-requests",AdminAuthMiddleware.verifyAdminSession,paginationMiddleware(10,50),paymentController.getAllRefundRequests);
 router.get('/:id', paymentController.getPaymentById);
 router.post("/verify", paymentController.verifyAndSavePayment);
 router.post("/request-refund",firebaseAuthMiddleware.verifySessionCookie, paymentController.requestRefund);
