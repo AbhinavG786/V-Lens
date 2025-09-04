@@ -2,6 +2,8 @@ import { Order } from "../models/orderModel";
 import { Cart } from "../models/cartModel";
 import { Product } from "../models/productModel";
 import { User } from "../models/userModel";
+import { Inventory } from "../models/inventoryModel";
+import { Warehouse } from "../models/warehouseModel";
 import express from "express";
 import { generateInvoicePDF } from "../utils/invoiceGenerator";
 import { razorpay } from "../utils/razorpay";
@@ -179,6 +181,32 @@ class OrderController {
         eyeglasses: "eyeglassesRef",
       };
 
+      // First, validate stock availability for all items
+      for (const item of items) {
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          res
+            .status(400)
+            .json({ message: `Product with ID ${item.productId} not found` });
+          return;
+        }
+
+        // Check total stock across all warehouses
+        type TotalStockAgg = { _id: null; totalStock: number };
+        const totalStockAgg = await Inventory.aggregate<TotalStockAgg>([
+          { $match: { productId: product._id } },
+          { $group: { _id: null, totalStock: { $sum: "$stock" } } },
+        ]);
+
+        const availableStock = totalStockAgg[0]?.totalStock ?? 0;
+        if (availableStock < item.quantity) {
+          res.status(400).json({
+            message: `Insufficient stock for product ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}`,
+          });
+          return;
+        }
+      }
+
       for (const item of items) {
         const product = await Product.findById(item.productId);
         if (!product) {
@@ -217,6 +245,7 @@ class OrderController {
               discount: discountPerUnit,
               finalPrice: pricePerUnit,
               gstAmount: gstPerUnit,
+              warehouseId: null, // Admin will assign later
             });
           }
         }
@@ -259,39 +288,41 @@ class OrderController {
       savedOrder.invoiceUrl = invoicePath;
       await savedOrder.save();
 
-      const options = {
-        amount: Math.round(savedOrder.totalAmount * 100), // paise
-        currency: "INR",
-        receipt: orderNumber,
-      };
-
-      const razorpayOrder = await razorpay.orders.create(options);
-
-      if (!razorpayOrder) {
-        res.status(500).json({ message: "Failed to create Razorpay order" });
-        return;
-      }
-
-      const payment = new Payment({
-        userId: user._id,
-        orderId: savedOrder._id,
-        amount: savedOrder.totalAmount,
-        method: savedOrder.paymentMethod,
-        razorpayOrderId: razorpayOrder.id,
-        status: PaymentStatus.PENDING,
-      });
-
-      const savedPayment = await payment.save();
-
-    await savedOrder.updateOne({ $push: { payments: savedPayment._id } });
-
-      res
-        .status(201)
-        .json({
+      // Handle different payment methods uniformly: do NOT deduct inventory here
+      if (paymentMethod === "cod") {
+        // For COD, no Razorpay order. Admin assigns warehouses later; deduction occurs on delivery.
+        res.status(201).json({
+          Order: savedOrder,
+          message: "COD order created successfully. Warehouse assignment pending. Inventory will be deducted after delivery confirmation.",
+        });
+      } else {
+        // For prepaid, create Razorpay order
+        const options = {
+          amount: Math.round(savedOrder.totalAmount * 100),
+          currency: "INR",
+          receipt: orderNumber,
+        };
+        const razorpayOrder = await razorpay.orders.create(options);
+        if (!razorpayOrder) {
+          res.status(500).json({ message: "Failed to create Razorpay order" });
+          return;
+        }
+        const payment = new Payment({
+          userId: user._id,
+          orderId: savedOrder._id,
+          amount: savedOrder.totalAmount,
+          method: savedOrder.paymentMethod,
+          razorpayOrderId: razorpayOrder.id,
+          status: PaymentStatus.PENDING,
+        });
+        const savedPayment = await payment.save();
+        await savedOrder.updateOne({ $push: { payments: savedPayment._id } });
+        res.status(201).json({
           Order: savedOrder,
           RazorpayOrder: razorpayOrder,
           PreVerificationPaymentDoc: savedPayment,
         });
+      }
     } catch (error) {
       res.status(500).json({ message: "Error creating order", error });
     }
@@ -389,6 +420,31 @@ class OrderController {
       if (!updatedOrder) {
         res.status(404).json({ message: "Order not found" });
         return;
+      }
+
+      // If delivered, payment method is COD, ensure payment completed and deduct inventory
+      if (updatedOrder.status === "delivered") {
+        const allAssigned = updatedOrder.items.every((it: any) => it.warehouseId);
+        if (!allAssigned) {
+          res.status(400).json({ message: "All items must have a warehouse assigned before marking delivered" });
+          return;
+        }
+
+        // If COD, mark payment completed on delivery
+        if (updatedOrder.paymentMethod === "cod") {
+          updatedOrder.paymentStatus = "completed";
+          updatedOrder.amountPaid = updatedOrder.totalAmount;
+          updatedOrder.paidAt = new Date();
+
+          // Deduct inventory now
+          try {
+            await this.deductInventoryFromOrder(updatedOrder);
+            await updatedOrder.save();
+          } catch (err) {
+            res.status(500).json({ message: "Failed to deduct inventory on delivery", error: err });
+            return;
+          }
+        }
       }
 
       res.status(200).json(updatedOrder);
@@ -575,6 +631,7 @@ class OrderController {
           "orderNumber status trackingNumber estimatedDelivery notes items shippingAddress createdAt"
         )
         .populate("items.productId", "name image price finalPrice")
+        .populate("items.warehouseId", "warehouseName address")
         .lean();
 
       if (!order) {
@@ -587,6 +644,155 @@ class OrderController {
       res.status(500).json({ message: "Error tracking order", error });
     }
   };
+
+  // Admin Methods for Warehouse Assignment and COD Management
+  assignWarehouseToOrderItems = async (req: express.Request, res: express.Response) => {
+    const { orderId } = req.params;
+    const { itemAssignments } = req.body; // Array of { productId, warehouseId }
+
+    if (!orderId || !itemAssignments || !Array.isArray(itemAssignments)) {
+      res.status(400).json({ message: "Order ID and item assignments are required" });
+      return;
+    }
+
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        res.status(404).json({ message: "Order not found" });
+        return;
+      }
+
+      // Validate warehouse availability and update assignments
+      for (const assignment of itemAssignments) {
+        const { productId, warehouseId } = assignment;
+        
+        // Find the order item
+        const orderItem = order.items.find(item => item.productId.toString() === productId);
+        if (!orderItem) {
+          res.status(400).json({ message: `Product ${productId} not found in order` });
+          return;
+        }
+
+        // For COD orders, inventory was already deducted at order creation
+        // We just need to assign the warehouse without checking stock again
+        if (order.paymentMethod === 'cod') {
+          orderItem.warehouseId = warehouseId;
+        } else {
+          // For online payments, check warehouse stock before assignment
+          const warehouseInventory = await Inventory.findOne({
+            productId,
+            warehouseId,
+          });
+
+          if (!warehouseInventory || warehouseInventory.stock < orderItem.quantity) {
+            res.status(400).json({
+              message: `Insufficient stock in warehouse for product ${productId}. Available: ${warehouseInventory?.stock || 0}, Required: ${orderItem.quantity}`,
+            });
+            return;
+          }
+
+          // Assign warehouse to the item
+          orderItem.warehouseId = warehouseId;
+        }
+      }
+
+      await order.save();
+      res.status(200).json({ message: "Warehouses assigned successfully", order });
+    } catch (error) {
+      res.status(500).json({ message: "Error assigning warehouses", error });
+    }
+  };
+
+
+  getAvailableWarehouses = async (req: express.Request, res: express.Response) => {
+    const { productId } = req.params;
+
+    if (!productId) {
+      res.status(400).json({ message: "Product ID is required" });
+      return;
+    }
+
+    try {
+      const availableWarehouses = await Inventory.find({
+        productId,
+        stock: { $gt: 0 },
+      })
+        .populate('warehouseId', 'warehouseName address contactNumber')
+        .select('stock warehouseId');
+
+      res.status(200).json({ availableWarehouses });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching available warehouses", error });
+    }
+  };
+
+  // Helper method to deduct inventory from order
+  private async deductInventoryFromOrder(order: any) {
+    const session = await (await import("mongoose")).default.startSession();
+    session.startTransaction();
+    try {
+      const typeToRefMap: Record<string, string> = {
+        lenses: "lensRef",
+        frames: "frameRef",
+        accessories: "accessoriesRef",
+        sunglasses: "sunglassesRef",
+        eyeglasses: "eyeglassesRef",
+      };
+
+      for (const item of order.items) {
+        if (!item.warehouseId) {
+          await session.abortTransaction();
+          throw new Error(`Warehouse not assigned for product ${item.productId} in order ${order._id}`);
+        }
+
+        // Atomically decrement stock with guard
+        const inventory = await Inventory.findOneAndUpdate(
+          {
+            productId: item.productId,
+            warehouseId: item.warehouseId,
+            stock: { $gte: item.quantity },
+          },
+          { $inc: { stock: -item.quantity } },
+          { new: true, session }
+        );
+
+        if (!inventory) {
+          await session.abortTransaction();
+          throw new Error(`Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`);
+        }
+
+        // Update product aggregate stock on subdoc
+        const product = await Product.findById(item.productId).session(session);
+        if (product) {
+          const refField = typeToRefMap[product.type];
+          if (refField) {
+            const populatedProduct = await product.populate<{ [k: string]: { stock: number } | null }>({
+              path: refField,
+              select: "stock",
+            });
+            const subDoc = (populatedProduct as any)[refField];
+            if (subDoc) {
+              type TotalStockAgg = { _id: null; totalStock: number };
+              const totalStockAgg = await Inventory.aggregate<TotalStockAgg>([
+                { $match: { productId: product._id } },
+                { $group: { _id: null, totalStock: { $sum: "$stock" } } },
+              ]).session(session);
+              subDoc.stock = totalStockAgg[0]?.totalStock ?? 0;
+              await subDoc.save({ session });
+            }
+          }
+        }
+      }
+
+      await session.commitTransaction();
+    } catch (error) {
+      console.error("Error deducting inventory:", error);
+      try { await session.abortTransaction(); } catch {}
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
 }
 
 export default new OrderController();

@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import { PaymentStatus, Payment } from "../models/paymentModel";
 import mongoose from "mongoose";
 import { Order } from "../models/orderModel";
+import { Inventory } from "../models/inventoryModel";
+import { Product } from "../models/productModel";
 import { razorpay } from "../utils/razorpay";
 
 class PaymentController {
@@ -188,6 +190,28 @@ class PaymentController {
             ? "pending"
             : "failed";
         order.paidAt = totalPaid >= order.totalAmount ? new Date() : null;
+        
+        // If payment is fully completed, deduct inventory
+        if (totalPaid >= order.totalAmount && isValid) {
+          const allAssigned = order.items.every((it: any) => it.warehouseId);
+          if (!allAssigned) {
+            res.status(400).json({
+              verified: true,
+              payment,
+              order,
+              message: "Payment verified, but warehouses must be assigned for all items before inventory deduction.",
+            });
+            return;
+          }
+          try {
+            await this.deductInventoryFromOrder(order);
+            await order.save();
+          } catch (err) {
+            res.status(500).json({ message: "Payment verified but inventory deduction failed", error: err });
+            return;
+          }
+        }
+        
         await order.save();
       }
       // await Order.findByIdAndUpdate(savedPayment.orderId, {
@@ -413,13 +437,14 @@ class PaymentController {
         const order = await Order.findById(payment.orderId);
         if (order) {
           // Calculate total successful payments
-          const totalPaid = await Payment.aggregate([
+          type PaymentAgg = { _id: null; total: number };
+          const totalPaidAgg = await Payment.aggregate<PaymentAgg>([
             { $match: { orderId: order._id, status: PaymentStatus.SUCCESS } },
             { $group: { _id: null, total: { $sum: "$amount" } } },
           ]);
 
           // Calculate total refunded across all payments for this order
-          const totalRefundedAmt = await Payment.aggregate([
+          const totalRefundedAmtAgg = await Payment.aggregate<PaymentAgg>([
             {
               $match: {
                 orderId: order._id,
@@ -432,7 +457,7 @@ class PaymentController {
           ]);
 
           order.amountPaid =
-            (totalPaid[0]?.total || 0) - (totalRefundedAmt[0]?.total || 0);
+            (totalPaidAgg[0]?.total ?? 0) - (totalRefundedAmtAgg[0]?.total ?? 0);
 
           if (order.amountPaid <= 0) {
             order.paymentStatus = "refunded";
@@ -453,6 +478,75 @@ class PaymentController {
       res.status(500).json({ message: "Internal server error" });
     }
   };
+
+  // Helper method to deduct inventory when payment is completed
+  async deductInventoryFromOrder(order: any) {
+    const session = await (await import("mongoose")).default.startSession();
+    session.startTransaction();
+    try {
+      const typeToRefMap: Record<string, string> = {
+        lenses: "lensRef",
+        frames: "frameRef",
+        accessories: "accessoriesRef",
+        sunglasses: "sunglassesRef",
+        eyeglasses: "eyeglassesRef",
+      };
+
+      for (const item of order.items) {
+        if (!item.warehouseId) {
+          await session.abortTransaction();
+          throw new Error(`Warehouse not assigned for product ${item.productId} in order ${order._id}`);
+        }
+
+        // Atomically decrement stock with guard
+        const inventory = await Inventory.findOneAndUpdate(
+          {
+            productId: item.productId,
+            warehouseId: item.warehouseId,
+            stock: { $gte: item.quantity },
+          },
+          { $inc: { stock: -item.quantity } },
+          { new: true, session }
+        );
+
+        if (!inventory) {
+          await session.abortTransaction();
+          throw new Error(`Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`);
+        }
+
+        // Update product aggregate stock on subdoc
+        const product = await Product.findById(item.productId).session(session);
+        if (product) {
+          const refField = typeToRefMap[product.type];
+          if (refField) {
+            const populatedProduct = await product.populate<{ [k: string]: { stock: number } | null }>({
+              path: refField,
+              select: "stock",
+            });
+            const subDoc = (populatedProduct as any)[refField];
+            if (subDoc) {
+              type TotalStockAgg = { _id: null; totalStock: number };
+              const totalStockAgg = await Inventory.aggregate<TotalStockAgg>([
+                { $match: { productId: product._id } },
+                { $group: { _id: null, totalStock: { $sum: "$stock" } } },
+              ]).session(session);
+              subDoc.stock = totalStockAgg[0]?.totalStock ?? 0;
+              await subDoc.save({ session });
+            }
+          }
+        }
+      }
+
+      await session.commitTransaction();
+    } catch (error) {
+      console.error("Error deducting inventory:", error);
+      try { await session.abortTransaction(); } catch {}
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
 }
 
 export default new PaymentController();
