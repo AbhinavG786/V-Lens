@@ -192,12 +192,13 @@ class OrderController {
         }
 
         // Check total stock across all warehouses
-        const totalStock = await Inventory.aggregate([
+        type TotalStockAgg = { _id: null; totalStock: number };
+        const totalStockAgg = await Inventory.aggregate<TotalStockAgg>([
           { $match: { productId: product._id } },
           { $group: { _id: null, totalStock: { $sum: "$stock" } } },
         ]);
 
-        const availableStock = totalStock[0]?.totalStock || 0;
+        const availableStock = totalStockAgg[0]?.totalStock ?? 0;
         if (availableStock < item.quantity) {
           res.status(400).json({
             message: `Insufficient stock for product ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}`,
@@ -287,30 +288,25 @@ class OrderController {
       savedOrder.invoiceUrl = invoicePath;
       await savedOrder.save();
 
-      // Handle different payment methods
+      // Handle different payment methods uniformly: do NOT deduct inventory here
       if (paymentMethod === "cod") {
-        // For COD, deduct inventory immediately since stock is reserved
-        await this.deductInventoryFromOrder(savedOrder);
-        
+        // For COD, no Razorpay order. Admin assigns warehouses later; deduction occurs on delivery.
         res.status(201).json({
           Order: savedOrder,
-          message: "COD order created successfully. Inventory deducted. Admin will assign warehouses.",
+          message: "COD order created successfully. Warehouse assignment pending. Inventory will be deducted after delivery confirmation.",
         });
       } else {
-        // For online payments, create Razorpay order
+        // For prepaid, create Razorpay order
         const options = {
-          amount: Math.round(savedOrder.totalAmount * 100), // paise
+          amount: Math.round(savedOrder.totalAmount * 100),
           currency: "INR",
           receipt: orderNumber,
         };
-
         const razorpayOrder = await razorpay.orders.create(options);
-
         if (!razorpayOrder) {
           res.status(500).json({ message: "Failed to create Razorpay order" });
           return;
         }
-
         const payment = new Payment({
           userId: user._id,
           orderId: savedOrder._id,
@@ -319,11 +315,8 @@ class OrderController {
           razorpayOrderId: razorpayOrder.id,
           status: PaymentStatus.PENDING,
         });
-
         const savedPayment = await payment.save();
-
         await savedOrder.updateOne({ $push: { payments: savedPayment._id } });
-
         res.status(201).json({
           Order: savedOrder,
           RazorpayOrder: razorpayOrder,
@@ -427,6 +420,31 @@ class OrderController {
       if (!updatedOrder) {
         res.status(404).json({ message: "Order not found" });
         return;
+      }
+
+      // If delivered, payment method is COD, ensure payment completed and deduct inventory
+      if (updatedOrder.status === "delivered") {
+        const allAssigned = updatedOrder.items.every((it: any) => it.warehouseId);
+        if (!allAssigned) {
+          res.status(400).json({ message: "All items must have a warehouse assigned before marking delivered" });
+          return;
+        }
+
+        // If COD, mark payment completed on delivery
+        if (updatedOrder.paymentMethod === "cod") {
+          updatedOrder.paymentStatus = "completed";
+          updatedOrder.amountPaid = updatedOrder.totalAmount;
+          updatedOrder.paidAt = new Date();
+
+          // Deduct inventory now
+          try {
+            await this.deductInventoryFromOrder(updatedOrder);
+            await updatedOrder.save();
+          } catch (err) {
+            res.status(500).json({ message: "Failed to deduct inventory on delivery", error: err });
+            return;
+          }
+        }
       }
 
       res.status(200).json(updatedOrder);
@@ -610,7 +628,7 @@ class OrderController {
       }
       const order = await Order.findOne({ orderNumber, userId: user._id })
         .select(
-          "orderNumber status trackingNumber estimatedDelivery notes items shippingAddress createdAt codStatus"
+          "orderNumber status trackingNumber estimatedDelivery notes items shippingAddress createdAt"
         )
         .populate("items.productId", "name image price finalPrice")
         .populate("items.warehouseId", "warehouseName address")
@@ -685,68 +703,6 @@ class OrderController {
     }
   };
 
-  updateCODStatus = async (req: express.Request, res: express.Response) => {
-    const { orderId } = req.params;
-    const { statusField, value } = req.body; // statusField: 'orderConfirmed' | 'inTransit' | 'orderDelivered'
-
-    if (!orderId || !statusField || typeof value !== 'boolean') {
-      res.status(400).json({ message: "Order ID, status field, and value are required" });
-      return;
-    }
-
-    const validFields = ['orderConfirmed', 'inTransit', 'orderDelivered'];
-    if (!validFields.includes(statusField)) {
-      res.status(400).json({ message: "Invalid status field" });
-      return;
-    }
-
-    try {
-      const order = await Order.findById(orderId);
-      if (!order) {
-        res.status(404).json({ message: "Order not found" });
-        return;
-      }
-
-      if (order.paymentMethod !== 'cod') {
-        res.status(400).json({ message: "COD status can only be updated for COD orders" });
-        return;
-      }
-
-      // Initialize codStatus if it doesn't exist
-      if (!order.codStatus) {
-        order.codStatus = {
-          orderConfirmed: false,
-          inTransit: false,
-          orderDelivered: false,
-        };
-      }
-
-      // Update the specific field
-      (order.codStatus as any)[statusField] = value;
-
-      // Set timestamp for when status was set to true
-      if (value) {
-        const timestampField = statusField.replace('order', '').replace('Order', '').toLowerCase() + 'At';
-        if (statusField === 'orderConfirmed') {
-          (order.codStatus as any).confirmedAt = new Date();
-        } else if (statusField === 'inTransit') {
-          (order.codStatus as any).transitAt = new Date();
-        } else if (statusField === 'orderDelivered') {
-          (order.codStatus as any).deliveredAt = new Date();
-          // If order is delivered, mark payment as completed for COD
-          order.paymentStatus = 'completed';
-          order.amountPaid = order.totalAmount;
-          order.paidAt = new Date();
-          // Note: Inventory was already deducted when COD order was created
-        }
-      }
-
-      await order.save();
-      res.status(200).json({ message: "COD status updated successfully", order });
-    } catch (error) {
-      res.status(500).json({ message: "Error updating COD status", error });
-    }
-  };
 
   getAvailableWarehouses = async (req: express.Request, res: express.Response) => {
     const { productId } = req.params;
@@ -772,6 +728,8 @@ class OrderController {
 
   // Helper method to deduct inventory from order
   private async deductInventoryFromOrder(order: any) {
+    const session = await (await import("mongoose")).default.startSession();
+    session.startTransaction();
     try {
       const typeToRefMap: Record<string, string> = {
         lenses: "lensRef",
@@ -782,85 +740,57 @@ class OrderController {
       };
 
       for (const item of order.items) {
-        // For COD orders, we need to deduct from total inventory since warehouse isn't assigned yet
         if (!item.warehouseId) {
-          // Find all warehouses with this product and deduct proportionally
-          const inventories = await Inventory.find({ productId: item.productId });
-          let remainingQuantity = item.quantity;
+          await session.abortTransaction();
+          throw new Error(`Warehouse not assigned for product ${item.productId} in order ${order._id}`);
+        }
 
-          for (const inventory of inventories) {
-            if (remainingQuantity <= 0) break;
-            
-            const deductAmount = Math.min(inventory.stock, remainingQuantity);
-            inventory.stock -= deductAmount;
-            remainingQuantity -= deductAmount;
-            await inventory.save();
-          }
-
-          // Update product total stock
-          const product = await Product.findById(item.productId);
-          if (product) {
-            const refField = typeToRefMap[product.type];
-            if (refField) {
-              const populatedProduct = await product.populate<{
-                [key: string]: { stock: number } | null;
-              }>({
-                path: refField,
-                select: "stock",
-              });
-              const subDoc = (populatedProduct as any)[refField];
-              if (subDoc) {
-                // Recalculate total stock across all warehouses
-                const totalStock = await Inventory.aggregate([
-                  { $match: { productId: product._id } },
-                  { $group: { _id: null, totalStock: { $sum: "$stock" } } },
-                ]);
-                subDoc.stock = totalStock[0]?.totalStock || 0;
-                await subDoc.save();
-              }
-            }
-          }
-        } else {
-          // If warehouse is assigned, deduct from specific warehouse
-          const inventory = await Inventory.findOne({
+        // Atomically decrement stock with guard
+        const inventory = await Inventory.findOneAndUpdate(
+          {
             productId: item.productId,
             warehouseId: item.warehouseId,
-          });
+            stock: { $gte: item.quantity },
+          },
+          { $inc: { stock: -item.quantity } },
+          { new: true, session }
+        );
 
-          if (inventory && inventory.stock >= item.quantity) {
-            inventory.stock -= item.quantity;
-            await inventory.save();
+        if (!inventory) {
+          await session.abortTransaction();
+          throw new Error(`Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`);
+        }
 
-            // Update product total stock
-            const product = await Product.findById(item.productId);
-            if (product) {
-              const refField = typeToRefMap[product.type];
-              if (refField) {
-                const populatedProduct = await product.populate<{
-                  [key: string]: { stock: number } | null;
-                }>({
-                  path: refField,
-                  select: "stock",
-                });
-                const subDoc = (populatedProduct as any)[refField];
-                if (subDoc) {
-                  // Recalculate total stock across all warehouses
-                  const totalStock = await Inventory.aggregate([
-                    { $match: { productId: product._id } },
-                    { $group: { _id: null, totalStock: { $sum: "$stock" } } },
-                  ]);
-                  subDoc.stock = totalStock[0]?.totalStock || 0;
-                  await subDoc.save();
-                }
-              }
+        // Update product aggregate stock on subdoc
+        const product = await Product.findById(item.productId).session(session);
+        if (product) {
+          const refField = typeToRefMap[product.type];
+          if (refField) {
+            const populatedProduct = await product.populate<{ [k: string]: { stock: number } | null }>({
+              path: refField,
+              select: "stock",
+            });
+            const subDoc = (populatedProduct as any)[refField];
+            if (subDoc) {
+              type TotalStockAgg = { _id: null; totalStock: number };
+              const totalStockAgg = await Inventory.aggregate<TotalStockAgg>([
+                { $match: { productId: product._id } },
+                { $group: { _id: null, totalStock: { $sum: "$stock" } } },
+              ]).session(session);
+              subDoc.stock = totalStockAgg[0]?.totalStock ?? 0;
+              await subDoc.save({ session });
             }
-          } else {
-            console.error(`Insufficient inventory for product ${item.productId} in warehouse ${item.warehouseId}`);
           }
         }
       }
+
+      await session.commitTransaction();
     } catch (error) {
       console.error("Error deducting inventory:", error);
+      try { await session.abortTransaction(); } catch {}
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 }

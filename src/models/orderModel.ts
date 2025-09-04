@@ -38,30 +38,13 @@ const orderItemSchema = new Schema(
 );
 
 const gstDetailsSchema = new Schema({
-  isGSTPurchase: {
-    type: Boolean,
-    default: false,
-  },
-  gstNumber: {
-    type: String,
-  },
-  companyName: {
-    type: String,
-  },
-  registrationNumber: {
-    type: String,
-  },
-  companyAddress: {
-    type: String,
-  },
-  gstRate: {
-    type: Number,
-    default: 0,
-  },
-  gstAmount: {
-    type: Number,
-    default: 0,
-  }, // total GST amount
+  isGSTPurchase: { type: Boolean, default: false },
+  gstNumber: { type: String },
+  companyName: { type: String },
+  registrationNumber: { type: String },
+  companyAddress: { type: String },
+  gstRate: { type: Number, default: 0 },
+  gstAmount: { type: Number, default: 0 }, // total GST amount
 });
 
 const orderSchema = new Schema(
@@ -93,30 +76,6 @@ const orderSchema = new Schema(
       ],
       default: "pending",
     },
-    // COD specific status fields
-    codStatus: {
-      orderConfirmed: {
-        type: Boolean,
-        default: false,
-      },
-      inTransit: {
-        type: Boolean,
-        default: false,
-      },
-      orderDelivered: {
-        type: Boolean,
-        default: false,
-      },
-      confirmedAt: {
-        type: Date,
-      },
-      transitAt: {
-        type: Date,
-      },
-      deliveredAt: {
-        type: Date,
-      },
-    },
     totalAmount: {
       type: Number,
       required: true,
@@ -129,12 +88,8 @@ const orderSchema = new Schema(
       type: Number,
       required: true,
     },
-    invoiceUrl: {
-      type: String,
-    },
-    gstDetails: {
-      type: gstDetailsSchema,
-    },
+    invoiceUrl: { type: String },
+    gstDetails: { type: gstDetailsSchema },
     shippingAddress: {
       street: { type: String, required: true },
       city: { type: String, required: true },
@@ -159,32 +114,18 @@ const orderSchema = new Schema(
       enum: ["pending", "completed", "failed", "refunded", "partial"],
       default: "pending",
     },
-    amountPaid: {
-      type: Number,
-      default: 0,
-    }, // Sum of successful payments
-    paidAt: {
-      type: Date,
-    },
+    amountPaid: { type: Number, default: 0 },
+    paidAt: { type: Date },
     payments: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Payment",
       },
-    ], // all attempts linked
-    prescriptionId: {
-      type: Schema.Types.ObjectId,
-      ref: "Prescription",
-    },
-    trackingNumber: {
-      type: String,
-    },
-    estimatedDelivery: {
-      type: Date,
-    },
-    notes: {
-      type: String,
-    },
+    ],
+    prescriptionId: { type: Schema.Types.ObjectId, ref: "Prescription" },
+    trackingNumber: { type: String },
+    estimatedDelivery: { type: Date },
+    notes: { type: String },
   },
   { timestamps: true }
 );
@@ -194,5 +135,4 @@ orderSchema.index({ orderNumber: 1 }, { unique: true });
 orderSchema.index({ status: 1 });
 
 export type OrderType = InferSchemaType<typeof orderSchema>;
-
 export const Order = mongoose.model<OrderType>("Order", orderSchema);
