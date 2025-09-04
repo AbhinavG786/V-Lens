@@ -21,7 +21,7 @@ router.route("/:id/tracking").patch(AdminAuthMiddleware.verifyAdminSession, orde
 
 // New admin routes for warehouse management and COD
 router.route("/:orderId/assign-warehouses").patch(AdminAuthMiddleware.verifyAdminSession, orderController.assignWarehouseToOrderItems);
-router.route("/:orderId/cod-status").patch(AdminAuthMiddleware.verifyAdminSession, orderController.updateCODStatus);
+// router.route("/:orderId/cod-status").patch(AdminAuthMiddleware.verifyAdminSession, orderController.updateCODStatus);
 router.route("/warehouses/:productId").get(AdminAuthMiddleware.verifyAdminSession, orderController.getAvailableWarehouses);
 
 export default router; 

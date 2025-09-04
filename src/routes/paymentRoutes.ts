@@ -12,7 +12,7 @@ router.post("/initiate-refund", AdminAuthMiddleware.verifyAdminSession, paymentC
 router.post("/refund-webhook", paymentController.handleRazorpayWebhook);
 
 // New route for COD inventory deduction
-router.post("/cod/:orderId/deduct-inventory", AdminAuthMiddleware.verifyAdminSession, paymentController.deductInventoryForCOD);
+// router.post("/cod/:orderId/deduct-inventory", AdminAuthMiddleware.verifyAdminSession, paymentController.deductInventoryForCOD);
 
 // POST /payments
 // router.post('/', paymentController.createPayment);
