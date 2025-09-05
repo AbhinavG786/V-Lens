@@ -19,14 +19,16 @@ const bufferToStream = (buffer: Buffer) => {
 export const uploadBufferToCloudinary = async (
   fileBuffer: Buffer,
   filename: string,
-  folder :string
+  folder :string,
+   resourceType: "image" | "raw" | "auto" = "auto"
 ): Promise<{ secure_url: string; public_id: string } | ""> => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,
-        public_id: `${Date.now()}-${filename}`,
-        resource_type: "auto",
+        public_id: `${Date.now()}-${filename.replace(/\.pdf$/, "")}`,
+        resource_type: resourceType,
+        ...(resourceType === "raw" ? { format: "pdf" } : {}), // only enforce pdf when raw
       },
       (error, result) => {
         if (error) return reject(error);

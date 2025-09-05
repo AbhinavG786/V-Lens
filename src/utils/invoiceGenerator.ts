@@ -17,7 +17,8 @@ export const generateInvoicePDF = async (order: OrderType) => {
         const uploadResult = await uploadBufferToCloudinary(
           pdfBuffer,
           `${order.orderNumber}.pdf`,
-          "invoices"
+          "invoices",
+          "raw"
         );
 
         if (typeof uploadResult === "object" && uploadResult !== null && "secure_url" in uploadResult) {
