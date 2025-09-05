@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { OrderType } from "../models/orderModel";
-import { uploadBufferToCloudinary } from "../utils/cloudinary";
+// import { uploadBufferToCloudinary } from "../utils/cloudinary";
+import { uploadInvoiceToSupabase } from "../utils/uploadSupabase";
 
 export const generateInvoicePDF = async (order: OrderType) => {
   return new Promise(async (resolve, reject) => {
@@ -11,20 +12,30 @@ export const generateInvoicePDF = async (order: OrderType) => {
       // Capture PDF data into buffer
       doc.on("data", (chunk) => chunks.push(chunk));
       doc.on("end", async () => {
-        const pdfBuffer = Buffer.concat(chunks);
+        try {
+          const pdfBuffer = Buffer.concat(chunks);
 
-        // Upload to Cloudinary in "invoices" folder
-        const uploadResult = await uploadBufferToCloudinary(
-          pdfBuffer,
-          `${order.orderNumber}.pdf`,
-          "invoices",
-          "raw"
-        );
+          // Upload to Cloudinary in "invoices" folder
+          // const uploadResult = await uploadBufferToCloudinary(
+          //   pdfBuffer,
+          //   `${order.orderNumber}.pdf`,
+          //   "invoices",
+          //   "raw"
+          // );
 
-        if (typeof uploadResult === "object" && uploadResult !== null && "secure_url" in uploadResult) {
-          resolve(uploadResult.secure_url);
-        } else {
-          resolve("");
+          const uploadResult = await uploadInvoiceToSupabase(
+            pdfBuffer,
+            "invoice.pdf",
+            order.orderNumber
+          );
+
+          if (uploadResult) {
+            resolve(uploadResult);
+          } else {
+            resolve("");
+          }
+        } catch (err) {
+          reject(err);
         }
       });
 
@@ -48,7 +59,9 @@ export const generateInvoicePDF = async (order: OrderType) => {
         doc.text(`Address: ${order.gstDetails.companyAddress}`);
       } else {
         const addr = order.shippingAddress;
-        doc.text(`Shipping Address: ${addr?.street}, ${addr?.city}, ${addr?.state} ${addr?.zipCode}, ${addr?.country}`);
+        doc.text(
+          `Shipping Address: ${addr?.street}, ${addr?.city}, ${addr?.state} ${addr?.zipCode}, ${addr?.country}`
+        );
       }
       doc.moveDown(1);
 
@@ -83,10 +96,14 @@ export const generateInvoicePDF = async (order: OrderType) => {
       doc.text(`Discount: ₹${order.discountAmount.toFixed(2)}`);
       if (order.gstDetails?.isGSTPurchase) {
         doc.text(
-          `GST (${order.gstDetails.gstRate}%): ₹${order.gstDetails.gstAmount.toFixed(2)}`
+          `GST (${
+            order.gstDetails.gstRate
+          }%): ₹${order.gstDetails.gstAmount.toFixed(2)}`
         );
       }
-      doc.font("Helvetica-Bold").text(`Total: ₹${order.totalAmount.toFixed(2)}`);
+      doc
+        .font("Helvetica-Bold")
+        .text(`Total: ₹${order.totalAmount.toFixed(2)}`);
 
       // End PDF
       doc.end();
