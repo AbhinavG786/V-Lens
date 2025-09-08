@@ -108,6 +108,11 @@ class WarehouseController {
         res.status(404).json({ error: "Warehouse not found" });
         return;
       }
+      const existingAssignedWarehouse = await Warehouse.findOne({ warehouseManager: userId });
+      if (existingAssignedWarehouse) {
+        res.status(400).json({ error: "This user is already assigned to a warehouse" });
+        return;
+      }
       const user = await User.findById(userId);
       if (!user || !user.isWarehouseManager) {
         res.status(404).json({ error: "Warehouse User not found" });
