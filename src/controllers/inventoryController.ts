@@ -199,6 +199,8 @@ class InventoryController {
           type: product.type,
           stockInWarehouse: entry.stock,
           totalStock: refStock,
+          threshold: entry.threshold,
+          sku: entry.SKU,
         };
       });
 
@@ -260,35 +262,36 @@ class InventoryController {
     }
   };
 
-getTotalStockForProduct = async (req:Request,res:Response) => {
-  const { productId } = req.params;
-  if (!productId) {
-    res.status(400).json({ error: "Product ID is required" });
-    return;
-  }
-  try{
-  const result = await Inventory.aggregate([
-    {
-      $match: {
-        productId: new mongoose.Types.ObjectId(productId),
-      },
-    },
-    {
-      $group: {
-        _id: "$productId",
-        totalStock: { $sum: "$stock" },
-      },
-    },
-  ]);
+  getTotalStockForProduct = async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    if (!productId) {
+      res.status(400).json({ error: "Product ID is required" });
+      return;
+    }
+    try {
+      const result = await Inventory.aggregate([
+        {
+          $match: {
+            productId: new mongoose.Types.ObjectId(productId),
+          },
+        },
+        {
+          $group: {
+            _id: "$productId",
+            totalStock: { $sum: "$stock" },
+          },
+        },
+      ]);
 
-  const output= result[0]?.totalStock ?? 0;
-  res.status(200).json({ totalStock: output });
-} catch (error) {
-    console.error("Error fetching total stock for product:", error);
-    res.status(500).json({ error: "Failed to fetch total stock for product" });
-  }
-};
-
+      const output = result[0]?.totalStock ?? 0;
+      res.status(200).json({ totalStock: output });
+    } catch (error) {
+      console.error("Error fetching total stock for product:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch total stock for product" });
+    }
+  };
 }
 
 export default new InventoryController();
