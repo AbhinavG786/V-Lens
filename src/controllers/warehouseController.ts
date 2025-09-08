@@ -438,6 +438,27 @@ class WarehouseController {
       res.status(500).json({ error: "Failed to delete Warehouse Manager" });
     }
   }
+  
+
+  findWarehouseForManager=async(req: express.Request, res: express.Response) => {
+    const { userId } = req.params;
+    if (!userId) {
+      res.status(400).json({ error: "User ID is required" });
+      return;
+    }
+    try{
+      const warehouse = await Warehouse.findOne({ warehouseManager: userId });
+      if (!warehouse) {
+        res.status(404).json({ error: "No warehouse assigned to this manager" });
+        return;
+      }
+      res.status(200).json({ warehouse });
+    }
+    catch(error){
+      res.status(500).json({ error: "Failed to retrieve warehouse for manager" });
+    }
+  }
+
 
   
 }
