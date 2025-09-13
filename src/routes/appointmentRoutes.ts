@@ -7,6 +7,7 @@ import paginationMiddleware from "../middlewares/paginationMiddleware";
 const router = Router();
 
 router.post("/", FirebaseAuthMiddleware.verifySessionCookie, appointment.bookAppointment);
+router.post("/verify-payment", FirebaseAuthMiddleware.verifySessionCookie, appointment.verifyAppointmentPayment);
 router.get("/mine", FirebaseAuthMiddleware.verifySessionCookie, appointment.getUserAppointments);
 router.patch("/:appointmentId/cancel", FirebaseAuthMiddleware.verifySessionCookie, appointment.cancelAppointment);
 router.get("/", adminAuth.verifyAdminSession, paginationMiddleware(10, 50), appointment.getAllAppointments);
