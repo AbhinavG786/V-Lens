@@ -8,9 +8,12 @@ import mongoose from "mongoose";
 class AppointmentController {
   bookAppointment = async (req: express.Request, res: express.Response) => {
     const firebaseUID = req.user?.uid;
-    const { type, storeLocation, address, date, timeSlot, amount } = req.body;
+    const { type, storeLocation, address, date, timeSlot } = req.body;
+    
+    // Hardcoded appointment fee - controlled by backend for security
+    const amount = 1000;
 
-    if (!firebaseUID || !type || !date || !timeSlot || !amount) {
+    if (!firebaseUID || !type || !date || !timeSlot) {
        res.status(400).json({ message: "Missing required fields" });
        return
     }
@@ -27,11 +30,6 @@ class AppointmentController {
 
     if (type === "home" && !address) {
        res.status(400).json({ message: "Address is required for home booking" });
-       return
-    }
-
-    if (amount <= 0) {
-       res.status(400).json({ message: "Amount must be greater than 0" });
        return
     }
 
