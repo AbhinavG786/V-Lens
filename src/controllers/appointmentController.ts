@@ -1,11 +1,17 @@
 import { Appointment } from "../models/appointmentModel";
 import { User } from "../models/userModel";
+import { Payment, PaymentStatus } from "../models/paymentModel";
+import { razorpay } from "../utils/razorpay";
 import express from "express";
+import mongoose from "mongoose";
 
 class AppointmentController {
   bookAppointment = async (req: express.Request, res: express.Response) => {
     const firebaseUID = req.user?.uid;
     const { type, storeLocation, address, date, timeSlot } = req.body;
+    
+    // Hardcoded appointment fee - controlled by backend for security
+    const amount = 1000;
 
     if (!firebaseUID || !type || !date || !timeSlot) {
        res.status(400).json({ message: "Missing required fields" });
@@ -32,17 +38,49 @@ class AppointmentController {
       if (!user) { res.status(404).json({ message: "User not found" });
       return}
 
+      // Create Razorpay order
+      const razorpayOrder = await razorpay.orders.create({
+        amount: Math.round(amount * 100), // Convert to paise
+        currency: "INR",
+        receipt: `appointment_${Date.now()}`,
+      });
+
+      // Create appointment with payment details
       const newAppointment = new Appointment({
         userId: user._id,
         type,
         storeLocation: type === "store" ? storeLocation : undefined,
         address: type === "home" ? address : undefined,
         date,
-        timeSlot
+        timeSlot,
+        amount,
+        paymentStatus: "pending"
       });
 
       await newAppointment.save();
-      res.status(201).json({ message: "Appointment booked", appointment: newAppointment });
+
+      // Create payment record
+      const payment = new Payment({
+        userId: user._id,
+        orderId: newAppointment._id, // Using appointment ID as orderId for appointments
+        amount,
+        method: "razorpay",
+        razorpayOrderId: razorpayOrder.id,
+        status: PaymentStatus.PENDING
+      });
+
+      await payment.save();
+
+      // Update appointment with payment ID
+      newAppointment.paymentId = payment._id;
+      await newAppointment.save();
+
+      res.status(201).json({ 
+        message: "Appointment booked successfully", 
+        appointment: newAppointment,
+        razorpayOrder,
+        paymentId: payment._id
+      });
     } catch (error) {
       res.status(500).json({ message: "Error booking appointment", error });
     }
@@ -135,6 +173,75 @@ class AppointmentController {
       res.status(200).json({ message: "Appointment cancelled", appointment });
     } catch (error) {
       res.status(500).json({ message: "Error cancelling appointment", error });
+    }
+  };
+
+  verifyAppointmentPayment = async (req: express.Request, res: express.Response) => {
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+      // Validate required fields
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        res.status(400).json({ message: "All fields are required." });
+        return;
+      }
+
+      // Find the payment record
+      const payment = await Payment.findOne({
+        razorpayOrderId: razorpay_order_id,
+      });
+
+      if (!payment) {
+        res.status(404).json({ message: "Payment not found" });
+        return;
+      }
+
+      // Check if payment is already verified
+      if (payment.status === PaymentStatus.SUCCESS) {
+        res.status(409).json({ message: "Payment already verified" });
+        return;
+      }
+
+      // Verify Razorpay signature
+      const crypto = require("crypto");
+      const hmac = crypto
+        .createHmac("sha256", process.env.RAZORPAY_SECRET!)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest("hex");
+
+      const isValid = hmac === razorpay_signature;
+
+      // Update payment record
+      payment.paidAt = new Date();
+      payment.transactionId = razorpay_payment_id;
+      payment.status = isValid ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+      await payment.save();
+
+      // Update appointment payment status
+      const appointment = await Appointment.findById(payment.orderId);
+      if (appointment) {
+        appointment.paymentStatus = isValid ? "completed" : "failed";
+        await appointment.save();
+      }
+
+      if (isValid) {
+        res.status(200).json({
+          verified: true,
+          message: "Payment verified successfully",
+          appointment,
+          payment
+        });
+      } else {
+        res.status(400).json({
+          verified: false,
+          message: "Invalid signature. Payment failed.",
+          appointment,
+          payment
+        });
+      }
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      res.status(500).json({ message: "Internal server error", error });
     }
   };
 }

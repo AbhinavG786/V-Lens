@@ -32,6 +32,19 @@ const appointmentSchema = new Schema(
       enum: ["pending", "approved", "completed", "cancelled"],
       default: "pending",
     },
+    amount: {
+      type: Number,
+      required: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "completed", "failed", "refunded"],
+      default: "pending",
+    },
+    paymentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Payment",
+    },
   },
   {
     timestamps: true,
