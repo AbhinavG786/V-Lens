@@ -11,6 +11,7 @@ router.route("/random").get(paginationMiddleware(10,50),product.getRandomProduct
 router.route("/trending").get(paginationMiddleware(10,50),product.getTrendingProducts);
 router.route("/get/:productId").get(product.getProductById);
 router.route("/productType").get(paginationMiddleware(10,50),product.getAllProductsByType);
+router.route("/all-3d-try-on").get(paginationMiddleware(10,50),product.getAllProductsWith3DTryOn);
 router.route("/2d-try-on/:productId").post(adminAuth.verifyAdminSession,upload.single("file"),product.upload2dTryOnImage)
 router.route("/3d-try-on/:productId").post(adminAuth.verifyAdminSession,upload.array("files",2),product.upload3dTryOnFiles)
 

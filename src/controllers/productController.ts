@@ -335,6 +335,35 @@ class ProductController {
     }
   };
 
+  getAllProductsWith3DTryOn = async (req: Request, res: Response) => {
+    const { skip, take } = req.pagination!;
+    try {
+      const products = await Product.find({
+        "tryOn3DModel.objUrl": { $exists: true, $ne: null },
+        "tryOn3DModel.mtlUrl": { $exists: true, $ne: null },
+      })
+        .populate(
+          "lensRef frameRef accessoriesRef sunglassesRef eyeglassesRef"
+        )
+        .skip(Number(skip))
+        .limit(Number(take));
+      const total = await Product.countDocuments({
+        "tryOn3DModel.objUrl": { $exists: true, $ne: null },
+        "tryOn3DModel.mtlUrl": { $exists: true, $ne: null },
+      });
+      res.status(200).json({
+        data: products,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      console.error("Error fetching products with 3D try-on:", error);
+      res.status(500).json({ message: "Error fetching products", error });
+    }
+  }
+
   // getProductsByFinalPriceRange = async (req: Request, res: Response) => {
   //   const { minPrice, maxPrice, type } = req.query;
   //   const { skip, take } = req.pagination!;

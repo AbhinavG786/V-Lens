@@ -32,7 +32,6 @@ router.use("/recommendations", recommendationRoutes);
 router.use("/product", productRoutes);
 router.use("/prescription", prescriptionRoutes);
 router.use("/auth", authRoutes);
-router.use("/payments", paymentRoutes);
 router.use("/payment", paymentRoutes);
 router.use("/notification",notificationRoutes);
 router.use("/admin", adminRoutes);
