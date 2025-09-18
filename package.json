@@ -1,15 +1,15 @@
 {
   "name": "intern-valsco",
   "version": "1.0.0",
-  "description": "Valsco Backend LensKart",
+  "description": "Valsco Backend V-Lens",
   "keywords": [],
-  "homepage": "https://github.com/AbhinavG786/ValscoLensKart#readme",
+  "homepage": "https://github.com/AbhinavG786/V-Lens#readme",
   "bugs": {
-    "url": "https://github.com/AbhinavG786/ValscoLensKart/issues"
+    "url": "https://github.com/AbhinavG786/V-Lens/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AbhinavG786/ValscoLensKart.git"
+    "url": "git+https://github.com/AbhinavG786/V-Lens.git"
   },
   "license": "ISC",
   "author": "",
