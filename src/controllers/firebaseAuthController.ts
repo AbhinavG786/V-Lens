@@ -87,9 +87,9 @@ class FirebaseAuthController {
         maxAge: expiresIn,
         httpOnly: true,
         secure: false,
-        sameSite: "none",
+        sameSite: "lax",
       });
-      res.cookie("session_exists", "true", { secure: false,sameSite: "none" });
+      res.cookie("session_exists", "true", { secure: false, sameSite: "lax" });
 
       res.status(200).json({ message: "User login successful", user });
     } catch (error) {
@@ -103,9 +103,9 @@ class FirebaseAuthController {
       res.clearCookie("session", {
         httpOnly: true,
         secure: false,
-        sameSite: "none",
+        sameSite: "lax",
       });
-      res.clearCookie("session_exists", { secure: false, sameSite: "none" });
+      res.clearCookie("session_exists", { secure: false, sameSite: "lax" });
 
       res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
