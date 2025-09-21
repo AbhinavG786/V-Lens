@@ -58,12 +58,9 @@ class FirebaseAuthController {
         }
         const globalPhoneRegex = /^\+[1-9]\d{1,14}$/;
         if (!globalPhoneRegex.test(phone)) {
-          res
-            .status(400)
-            .json({
-              error:
-                "Invalid phone number. Use E.164 format, e.g., +14155552671",
-            });
+          res.status(400).json({
+            error: "Invalid phone number. Use E.164 format, e.g., +14155552671",
+          });
           return;
         }
         user = await User.create({
@@ -88,8 +85,10 @@ class FirebaseAuthController {
         httpOnly: true,
         secure: true,
         sameSite: "none",
+        domain: "https://v-lens.onrender.com", 
+        path: "/", 
       });
-      res.cookie("session_exists", "true", { secure: true, sameSite: "none" });
+      res.cookie("session_exists", "true", { secure: true, sameSite: "none", domain: "https://v-lens.onrender.com", path: "/" });
 
       res.status(200).json({ message: "User login successful", user });
     } catch (error) {
@@ -104,8 +103,10 @@ class FirebaseAuthController {
         httpOnly: true,
         secure: true,
         sameSite: "none",
+        domain: "https://v-lens.onrender.com", 
+        path: "/", 
       });
-      res.clearCookie("session_exists", { secure: true, sameSite: "none" });
+      res.clearCookie("session_exists", { secure: true, sameSite: "none", domain: "https://v-lens.onrender.com", path: "/" });
 
       res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
@@ -136,7 +137,7 @@ class FirebaseAuthController {
       });
       const resetLink = `${process.env.FRONTEND_URL}/reset-password/${user._id}/${token}`;
 
-      await sendMailer.sendPasswordResetMail(email, {resetUrl:resetLink});
+      await sendMailer.sendPasswordResetMail(email, { resetUrl: resetLink });
       res.status(200).json({ message: "Password reset link sent to email" });
     } catch (error) {
       res
