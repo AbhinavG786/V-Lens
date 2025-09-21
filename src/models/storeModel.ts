@@ -2,7 +2,10 @@ import mongoose, { Schema, InferSchemaType } from 'mongoose';
 
 const StoreSchema = new Schema({
   name: { type: String, required: true },
-  address: { type: String, required: true },
+  locality: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  zipCode: { type: String, required: true },
   employeeCount: { type: Number, required: true },
   location: {
     type: {

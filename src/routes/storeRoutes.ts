@@ -11,5 +11,7 @@ router.get('/all', paginationMiddleware(10,50), store.getAllStores);
 router.get('/:id', store.getStoreById);
 router.patch('/:id',adminAuth.verifyAdminSession, store.updateStore);
 router.delete('/:id',adminAuth.verifyAdminSession, store.deleteStore);
+router.get('/filter-city', paginationMiddleware(10, 50), store.filterStoresByCity);
+router.get('/filter-state', paginationMiddleware(10, 50), store.filterStoresByState);
 
 export default router;

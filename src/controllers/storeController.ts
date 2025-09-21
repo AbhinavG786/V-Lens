@@ -36,10 +36,13 @@ class StoreController {
   };
 
   createStore = async (req: express.Request, res: express.Response) => {
-    const { name, address, employeeCount,location, warehouseIds } = req.body;
+    const { name, locality, city, state, zipCode, employeeCount, location, warehouseIds } = req.body;
     if (
       !name ||
-      !address ||
+      !locality ||
+      !city ||
+      !state ||
+      !zipCode ||
       !location ||
       !employeeCount ||
       !Array.isArray(warehouseIds) ||
@@ -51,7 +54,10 @@ class StoreController {
     try {
       const newStore = new Store({
         name,
-        address,
+        locality,
+        city,
+        state,
+        zipCode,
         location,
         employeeCount,
         warehouses: warehouseIds,
@@ -184,6 +190,58 @@ class StoreController {
       res.status(500).json({ error: "Error deleting store" });
     }
   };
+
+  filterStoresByCity = async (req: express.Request, res: express.Response) => {
+    const { city } = req.query;
+    const { skip, take } = req.pagination!;
+    if (!city || typeof city !== "string") {
+      res.status(400).json({ error: "City query parameter is required" });
+      return;
+    }
+    try {
+      const stores = await Store.find({ city }).skip(Number(skip)).limit(Number(take));
+      if (!stores || stores.length === 0) {
+        res.status(404).json({ error: "No stores found for the specified city" });
+        return;
+      }
+      const total = await Store.countDocuments({ city });
+      res.json({
+        data: stores,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Error fetching stores" });
+    }
+  }
+
+  filterStoresByState = async (req: express.Request, res: express.Response) => {
+    const { state } = req.query;
+    const { skip, take } = req.pagination!;
+    if (!state || typeof state !== "string") {
+      res.status(400).json({ error: "State query parameter is required" });
+      return;
+    }
+    try {
+      const stores = await Store.find({ state }).skip(Number(skip)).limit(Number(take));
+      if (!stores || stores.length === 0) {
+        res.status(404).json({ error: "No stores found for the specified state" });
+        return;
+      }
+      const total = await Store.countDocuments({ state });
+      res.json({
+        data: stores,
+        total,
+        skip: Number(skip),
+        take: Number(take),
+        totalPages: Math.ceil(total / Number(take)),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Error fetching stores" });
+    } 
+  }
 }
 
 export default new StoreController();
