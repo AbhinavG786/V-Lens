@@ -8,10 +8,12 @@ import cookieParser from "cookie-parser";
 import { SocketServiceInit } from "./utils/socket-server";
 
 const app = express();
-
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://lens-kart.vercel.app"
+    ],
     credentials: true,
   })
 );
