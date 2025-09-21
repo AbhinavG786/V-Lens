@@ -13,8 +13,11 @@ const userSchema = new Schema(
     },
     phone: {
       type: String,
-      required: true,
-      unique: true,
+      sparse: true, // allows multiple docs without phone field
+      required: function (this: any): boolean {
+        return this.loginMethod === "email";
+      },
+      default: undefined,
     },
     gender: {
       type: String,
@@ -32,14 +35,14 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    isWarehouseManager:{
+    isWarehouseManager: {
       type: Boolean,
       default: false,
     },
     currentLoad: {
       type: Number,
       default: 0,
-    }, 
+    },
     maxLoad: {
       type: Number,
       default: 3,
