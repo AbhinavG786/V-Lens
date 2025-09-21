@@ -2,6 +2,7 @@ import product from "../controllers/productController"
 import { Router } from "express";
 import paginationMiddleware from "../middlewares/paginationMiddleware";
 import adminAuth from "../middlewares/adminAuth";
+import adminWarehouseAuth from "../middlewares/adminWarehouseAuth";
 import upload from "../middlewares/upload";
 
 const router= Router();
@@ -12,8 +13,8 @@ router.route("/trending").get(paginationMiddleware(10,50),product.getTrendingPro
 router.route("/get/:productId").get(product.getProductById);
 router.route("/productType").get(paginationMiddleware(10,50),product.getAllProductsByType);
 router.route("/all-3d-try-on").get(paginationMiddleware(10,50),product.getAllProductsWith3DTryOn);
-router.route("/2d-try-on/:productId").post(adminAuth.verifyAdminSession,upload.single("file"),product.upload2dTryOnImage)
-router.route("/3d-try-on/:productId").post(adminAuth.verifyAdminSession,upload.array("files",2),product.upload3dTryOnFiles)
+router.route("/2d-try-on/:productId").post(adminWarehouseAuth.verifyAdminAndWarehouseSession,upload.single("file"),product.upload2dTryOnImage)
+router.route("/3d-try-on/:productId").post(adminWarehouseAuth.verifyAdminAndWarehouseSession,upload.array("files",2),product.upload3dTryOnFiles)
 
 // router.route("/priceRange").get(paginationMiddleware(10,50),product.getProductsByFinalPriceRange);
 // router.route("/create").post(product.createProduct);
