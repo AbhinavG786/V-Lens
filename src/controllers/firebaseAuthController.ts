@@ -85,10 +85,10 @@ class FirebaseAuthController {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        domain: "https://v-lens.onrender.com", 
+        domain: "v-lens.onrender.com", 
         path: "/", 
       });
-      res.cookie("session_exists", "true", { secure: true, sameSite: "none", domain: "https://v-lens.onrender.com", path: "/" });
+      res.cookie("session_exists", "true", { secure: true, sameSite: "none", domain: "v-lens.onrender.com", path: "/" });
 
       res.status(200).json({ message: "User login successful", user });
     } catch (error) {
@@ -103,10 +103,10 @@ class FirebaseAuthController {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        domain: "https://v-lens.onrender.com", 
+        domain: "v-lens.onrender.com", 
         path: "/", 
       });
-      res.clearCookie("session_exists", { secure: true, sameSite: "none", domain: "https://v-lens.onrender.com", path: "/" });
+      res.clearCookie("session_exists", { secure: true, sameSite: "none", domain: "v-lens.onrender.com", path: "/" });
 
       res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
