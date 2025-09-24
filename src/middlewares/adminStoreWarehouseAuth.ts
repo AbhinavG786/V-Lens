@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { User } from "../models/userModel";
 import FirebaseAuthMiddleware from "./firebaseAuth";
 
-class adminWarehouseAuthMiddleware {
-  verifyAdminAndWarehouseSession = async (
+class adminStoreWarehouseAuthMiddleware {
+  verifyAdminStoreAndWarehouseSession = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -26,8 +26,8 @@ class adminWarehouseAuthMiddleware {
           return;
         }
 
-        if (!user.isWarehouseManager && !user.isAdmin) {
-          res.status(403).json({ error: "Warehouse Manager or Admin access required" });
+        if (!user.isWarehouseManager && !user.isAdmin && !user.isStoreManager) {
+          res.status(403).json({ error: "Warehouse Manager, Admin or Store Manager access required" });
           return;
         }
 
@@ -46,16 +46,23 @@ class adminWarehouseAuthMiddleware {
           isAdmin: user.isAdmin
         };
 
+        req.storeManager = {
+          uid: firebaseUID,
+          email: user.email,
+          fullName: user.fullName,
+          isStoreManager: user.isStoreManager
+        };
+
         next();
       } catch (error) {
-        console.error("Warehouse Manager/Admin authentication error:", error);
-        res.status(500).json({ error: "Internal server error during warehouse manager/admin authentication" });
+        console.error("Warehouse Manager/Admin/Store Manager authentication error:", error);
+        res.status(500).json({ error: "Internal server error during warehouse manager/admin/store manager authentication" });
       }
     });
   };
 
-  // Optional: Middleware to check if user is warehouse manager or admin without requiring session verification
-  checkWarehouseManagerOrAdminStatus = async (
+  // Optional: Middleware to check if user is warehouse manager or admin or store manager without requiring session verification
+  checkWarehouseManagerStoreOrAdminStatus = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -75,8 +82,8 @@ class adminWarehouseAuthMiddleware {
         return;
       }
 
-      if (!user.isWarehouseManager && !user.isAdmin) {
-        res.status(403).json({ error: "Warehouse Manager or Admin access required" });
+      if (!user.isWarehouseManager && !user.isAdmin && !user.isStoreManager) {
+        res.status(403).json({ error: "Warehouse Manager, Admin or Store Manager access required" });
         return;
       }
 
@@ -95,12 +102,19 @@ class adminWarehouseAuthMiddleware {
         isAdmin: user.isAdmin
       };
 
+        req.storeManager = {
+        uid: firebaseUID,
+        email: user.email,
+        fullName: user.fullName,
+        isStoreManager: user.isStoreManager
+      };
+
       next();
     } catch (error) {
-      console.error("Warehouse Manager/Admin status check error:", error);
-      res.status(500).json({ error: "Internal server error during warehouse manager/admin status check" });
+      console.error("Warehouse Manager/Admin/Store Manager status check error:", error);
+      res.status(500).json({ error: "Internal server error during warehouse manager/admin/store manager status check" });
     }
   };
 }
 
-export default new adminWarehouseAuthMiddleware();
+export default new adminStoreWarehouseAuthMiddleware();

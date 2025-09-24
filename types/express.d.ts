@@ -27,6 +27,12 @@ declare global {
           fullName: string;
           isWarehouseManager: boolean;
         };
+        storeManager?: {
+          uid: string;
+          email: string;
+          fullName: string;
+          isStoreManager: boolean;
+        };
     }
   }
 }

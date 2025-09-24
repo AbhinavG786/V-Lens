@@ -278,6 +278,7 @@ class OrderController {
         paymentMethod,
         prescriptionId,
         notes,
+        placedBy:"customer",
       });
 
       const savedOrder = await order.save();

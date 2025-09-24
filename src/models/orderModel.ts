@@ -106,7 +106,7 @@ const orderSchema = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["credit_card", "debit_card", "upi", "net_banking", "cod"],
+      enum: ["credit_card", "debit_card", "upi", "net_banking", "cod","cash"],
       required: true,
     },
     paymentStatus: {
@@ -126,6 +126,9 @@ const orderSchema = new Schema(
     trackingNumber: { type: String },
     estimatedDelivery: { type: Date },
     notes: { type: String },
+    storeId: { type: Schema.Types.ObjectId, ref: "Store" },
+    placedBy: { type: String, enum: ["customer", "manager"], required: true },
+    customerName: { type: String }, // for walk-in customers
   },
   { timestamps: true }
 );

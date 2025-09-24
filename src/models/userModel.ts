@@ -39,6 +39,10 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isStoreManager: {
+      type: Boolean,
+      default: false,
+    },
     currentLoad: {
       type: Number,
       default: 0,

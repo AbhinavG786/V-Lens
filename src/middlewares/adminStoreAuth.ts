@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { User } from "../models/userModel";
 import FirebaseAuthMiddleware from "./firebaseAuth";
 
-class adminWarehouseAuthMiddleware {
-  verifyAdminAndWarehouseSession = async (
+class adminStoreAuthMiddleware {
+  verifyAdminAndStoreSession = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -26,17 +26,17 @@ class adminWarehouseAuthMiddleware {
           return;
         }
 
-        if (!user.isWarehouseManager && !user.isAdmin) {
-          res.status(403).json({ error: "Warehouse Manager or Admin access required" });
+        if (!user.isStoreManager && !user.isAdmin) {
+          res.status(403).json({ error: "Store Manager or Admin access required" });
           return;
         }
 
-        // Add warehouse manager info to request
-        req.warehouseManager = {
+        // Add store manager info to request
+        req.storeManager = {
           uid: firebaseUID,
           email: user.email,
           fullName: user.fullName,
-          isWarehouseManager: user.isWarehouseManager
+          isStoreManager: user.isStoreManager
         };
 
         req.admin = {
@@ -48,14 +48,14 @@ class adminWarehouseAuthMiddleware {
 
         next();
       } catch (error) {
-        console.error("Warehouse Manager/Admin authentication error:", error);
-        res.status(500).json({ error: "Internal server error during warehouse manager/admin authentication" });
+        console.error("Store Manager/Admin authentication error:", error);
+        res.status(500).json({ error: "Internal server error during store manager/admin authentication" });
       }
     });
   };
 
-  // Optional: Middleware to check if user is warehouse manager or admin without requiring session verification
-  checkWarehouseManagerOrAdminStatus = async (
+  // Optional: Middleware to check if user is store manager or admin without requiring session verification
+  checkStoreManagerOrAdminStatus = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -75,17 +75,17 @@ class adminWarehouseAuthMiddleware {
         return;
       }
 
-      if (!user.isWarehouseManager && !user.isAdmin) {
-        res.status(403).json({ error: "Warehouse Manager or Admin access required" });
+      if (!user.isStoreManager && !user.isAdmin) {
+        res.status(403).json({ error: "Store Manager or Admin access required" });
         return;
       }
 
-      // Add warehouse manager info to request
-      req.warehouseManager = {
+      // Add store manager info to request
+      req.storeManager = {
         uid: firebaseUID,
         email: user.email,
         fullName: user.fullName,
-        isWarehouseManager: user.isWarehouseManager
+        isStoreManager: user.isStoreManager
       };
 
         req.admin = {
@@ -97,10 +97,10 @@ class adminWarehouseAuthMiddleware {
 
       next();
     } catch (error) {
-      console.error("Warehouse Manager/Admin status check error:", error);
-      res.status(500).json({ error: "Internal server error during warehouse manager/admin status check" });
+      console.error("Store Manager/Admin status check error:", error);
+      res.status(500).json({ error: "Internal server error during store manager/admin status check" });
     }
   };
 }
 
-export default new adminWarehouseAuthMiddleware();
+export default new adminStoreAuthMiddleware();
